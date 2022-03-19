@@ -2,9 +2,6 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
--- todo: explosions do not
---       trigger combos!
-
 -- 6. (powerups)
 -- 7. juicyness
 --     arrow anim
@@ -323,12 +320,7 @@ function update_game()
      end
     end
     brickhit=true
-    hitbrick(i)
-
-    if levelfinished() then
-     _draw()
-     levelover()
-    end
+    hitbrick(i,true)
    end
   end
   ball_x=nextx
@@ -347,15 +339,22 @@ function update_game()
   end
  end
 
+ if levelfinished() then
+  _draw()
+  levelover()
+ end
+
 end
 
-function hitbrick(_i)
+function hitbrick(_i,_combo)
  if brick_t[_i]=="b" then
   sfx(2+chain)
   brick_v[_i]=false
-  points+=10*chain
-  chain+=1
-  chain=mid(1,chain,7)
+  if _combo then
+   points+=10*chain
+   chain+=1
+   chain=mid(1,chain,7)
+  end
  elseif brick_t[_i]=="i" then
   sfx(10)
  elseif brick_t[_i]=="h" then
@@ -364,16 +363,20 @@ function hitbrick(_i)
  elseif brick_t[_i]=="p" then
   sfx(2+chain)
   brick_v[_i]=false
-  points+=10*chain
-  chain+=1
-  chain=mid(1,chain,7)
+  if _combo then
+   points+=10*chain
+   chain+=1
+   chain=mid(1,chain,7)
+  end
   --todo trigger powerup
  elseif brick_t[_i]=="s" then
   sfx(2+chain)
   brick_t[_i]="zz"
-  points+=10*chain
-  chain+=1
-  chain=mid(1,chain,7)
+  if _combo then
+   points+=10*chain
+   chain+=1
+   chain=mid(1,chain,7)
+  end
   --todo trigger powerup
  end
 end
@@ -406,7 +409,7 @@ function explodebrick(_i)
   and abs(brick_x[j]-brick_x[_i]) <= (brick_w+2)
   and abs(brick_y[j]-brick_y[_i]) <= (brick_h+2)
   then
-   hitbrick(j)
+   hitbrick(j,false)
   end
  end
 
