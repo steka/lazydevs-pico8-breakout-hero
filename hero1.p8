@@ -2,11 +2,6 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
--- 7. juicyness
---     particles
---      - death particles
---      - explosions
---      - megaball effects
 -- 8. high score
 -- 9. ui
 --    - powerup messages
@@ -14,6 +9,11 @@ __lua__
 -- 10. better collision
 -- 11. gameplay tweaks
 --     - smaller paddle
+-- 12  level design
+-- 13. sound
+--     - level over fanare\
+--     - start screen music
+--     - high score music
 
 function _init()
  cls()
@@ -25,8 +25,9 @@ function _init()
  --levels[1] = "x5b"
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
- --levels[1] = "////x4b/s9s"
- levels[1] = "b9bb9bb9bb9bb9bp9p"
+ levels[1] = "////x4b/s9s"
+ --levels[1] = "b9bh9h"
+ levels[2] = "b9bb9bb9bb9bb9bp9p"
 
  shake=0
 
@@ -292,7 +293,9 @@ function gameover()
 end
 
 function levelover()
- mode="levelover"
+ mode="leveloverwait"
+ govercountdown=60
+ blinkspeed=16
 end
 
 function releasestuck()
@@ -315,7 +318,7 @@ end
 function powerupget(_p)
  if _p == 1 then
   -- slowdown
-  timer_slow = 900
+  timer_slow = 400
  elseif _p == 2 then
   -- life
   lives+=1
@@ -397,6 +400,7 @@ function hitbrick(_i,_combo)
  elseif bricks[_i].t=="s" then
   -- sposion brick
   sfx(2+chain)
+  shatterbrick(bricks[_i],lasthitx,lasthity)
   bricks[_i].t="zz"
   if _combo then
    points+=10*chain*pointsmult
@@ -436,9 +440,9 @@ function checkexplosions()
  for i=1,#bricks do
   if bricks[i].t == "z" and bricks[i].v then
    explodebrick(i)
-   shake+=0.4
-   if shake>1 then
-    shake=1
+   spawnexplosion(bricks[i].x,bricks[i].y)
+   if shake<0.4 then
+    shake+=0.1
    end
   end
  end
@@ -662,6 +666,43 @@ function spawnpillpuft(_x,_y,_p)
  end
 end
 
+-- spawn death particles
+function spawndeath(_x,_y)
+ for i= 0,30 do
+  local _ang = rnd()
+  local _dx = sin(_ang)*(2+rnd(4))
+  local _dy = cos(_ang)*(2+rnd(4))
+  local _mycol
+
+  _mycol={10,10,9,4,0}
+  addpart(_x,_y,_dx,_dy,2,80+rnd(15),_mycol,3+rnd(6))
+ end
+end
+
+-- spawn death particles
+function spawnexplosion(_x,_y)
+ --first smoke
+ sfx(14)
+ for i= 0,20 do
+  local _ang = rnd()
+  local _dx = sin(_ang)*(rnd(4))
+  local _dy = cos(_ang)*(rnd(4))
+  local _mycol
+  _mycol={0,0,5,5,6}
+  addpart(_x,_y,_dx,_dy,2,80+rnd(15),_mycol,3+rnd(6))
+ end
+ --fireball
+ for i= 0,30 do
+  local _ang = rnd()
+  local _dx = sin(_ang)*(1+rnd(4))
+  local _dy = cos(_ang)*(1+rnd(4))
+  local _mycol
+  _mycol={7,10,9,8,5}
+  addpart(_x,_y,_dx,_dy,2,30+rnd(15),_mycol,2+rnd(4))
+ end
+
+end
+
 -- spawn a trail particle
 function spawntrail(_x,_y)
  if rnd()<0.5 then
@@ -868,6 +909,8 @@ function _update60()
   update_gameoverwait()
  elseif mode=="levelover" then
   update_levelover()
+ elseif mode=="leveloverwait" then
+  update_leveloverwait()
  end
 end
 
@@ -916,9 +959,29 @@ function update_gameoverwait()
  end
 end
 
+function update_leveloverwait()
+ govercountdown-=1
+ if govercountdown<=0 then
+  govercountdown= -1
+  mode="levelover"
+ end
+end
+
 function update_levelover()
- if btnp(4) then
-  nextlevel()
+ if govercountdown<0 then
+  if btnp(4) then
+   govercountdown=80
+   blinkspeed=1
+   sfx(15)
+  end
+ else
+  govercountdown-=1
+  fadeperc=(80-govercountdown)/80
+  if govercountdown<=0 then
+   govercountdown= -1
+   blinkspeed=8
+   nextlevel()
+  end
  end
 end
 
@@ -1129,6 +1192,7 @@ function updateball(bi)
   -- check if ball left screen
   if nexty > 127 then
    sfx(2)
+   spawndeath(myball.x,myball.y)
    if #ball > 1 then
     shake+=0.15
     del(ball,myball)
@@ -1159,6 +1223,8 @@ function _draw()
   draw_gameover()
  elseif mode=="levelover" then
   draw_levelover()
+ elseif mode=="leveloverwait" then
+  draw_game()
  end
 
  -- fade the screen
@@ -1183,7 +1249,7 @@ end
 function draw_levelover()
  rectfill(0,60,128,75,0)
  print("stage clear!",46,62,7)
- print("press ❎ to continue",27,68,6)
+ print("press ❎ to continue",27,68,blink_w)
 end
 
 function draw_game()
@@ -1299,3 +1365,5 @@ __sfx__
 000100003a0503505030050290403b0503b0503b0501f0401d0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0105000028050280502f0302f03027020270202f0202f02028010280102f0102f01028010280152f0102f01028010280100000000000000000000000000000000000000000000000000000000000000000000000
 010400003d6302d630206301c6301562013615106240f6150e6140d6150d614000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010300003f6732d673396711f6511465112651116510f6530f6420f6320b6320a6320a63209632096320762203622036120361203612036120361503614036150361401615016140161501613000000000000000
+010300002805128051310303103036030390301f0301f0302803128031310303103036030390301f0101f01028010280103101031010360103901010010100102801028010310103101036010390161001610016
