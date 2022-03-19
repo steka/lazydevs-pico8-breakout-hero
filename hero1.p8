@@ -5,8 +5,8 @@ __lua__
 -- 7. juicyness
 --     particles
 --      - death particles
---      - pickup particles
 --      - explosions
+--      - megaball effects
 -- 8. high score
 -- 9. ui
 --    - powerup messages
@@ -26,7 +26,7 @@ function _init()
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  --levels[1] = "////x4b/s9s"
- levels[1] = "b9bb9bb9bb9bb9bb9b"
+ levels[1] = "b9bb9bb9bb9bb9bp9p"
 
  shake=0
 
@@ -341,7 +341,7 @@ function powerupget(_p)
   timer_expand = 0
  elseif _p == 6 then
   -- megaball
-  timer_mega = 900
+  timer_mega = 100
  elseif _p == 7 then
   -- multiball
   multiball()
@@ -618,12 +618,47 @@ function addpart(_x,_y,_dx,_dy,_type,_maxage,_col,_s)
  add(part,_p)
 end
 
+-- spawn a small puft
 function spawnpuft(_x,_y)
  for i= 0,5 do
   local _ang = rnd()
   local _dx = sin(_ang)*1
   local _dy = cos(_ang)*1
   addpart(_x,_y,_dx,_dy,2,15+rnd(15),{7,6,5},1+rnd(2))
+ end
+end
+
+-- spawn a puft in the color of a pill
+function spawnpillpuft(_x,_y,_p)
+ for i= 0,20 do
+  local _ang = rnd()
+  local _dx = sin(_ang)*(1+rnd(2))
+  local _dy = cos(_ang)*(1+rnd(2))
+  local _mycol
+
+  if _p == 1 then
+   -- slowdown -- orange
+   _mycol={9,9,4,4,0}
+  elseif _p == 2 then
+   -- life -- white
+   _mycol={7,7,6,5,0}
+  elseif _p == 3 then
+   -- catch -- green
+   _mycol={11,11,3,3,0}
+  elseif _p == 4 then
+   -- expand -- blue
+   _mycol={12,12,5,5,0}
+  elseif _p == 5 then
+   -- reduce -- black
+   _mycol={0,0,5,5,6}
+  elseif _p == 6 then
+   -- megaball -- pink
+   _mycol={14,14,13,2,0}
+  else
+   -- multiball -- red
+   _mycol={8,8,4,2,0}
+  end
+  addpart(_x,_y,_dx,_dy,2,20+rnd(15),_mycol,1+rnd(4))
  end
 end
 
@@ -638,10 +673,23 @@ function spawntrail(_x,_y)
  end
 end
 
+-- spawn a megatrail particle
+function spawnmtrail(_x,_y)
+ if rnd() then
+  local _ang = rnd()
+  local _ox = sin(_ang)*ball_r
+  local _oy = cos(_ang)*ball_r
+
+  addpart(_x+_ox,_y+_oy,0,0,2,60+rnd(15),{14,13,2},1+rnd(1))
+ end
+end
+
 -- shatter brick
 function shatterbrick(_b,_vx,_vy)
  --screenshake and sound
- shake+=0.07
+ if shake<0.5 then
+  shake+=0.07
+ end
  sfx(13)
 
  --bump the brick
@@ -936,6 +984,7 @@ function update_game()
    del(pill,pill[i])
   elseif box_box(pill[i].x,pill[i].y,8,6,pad_x,pad_y,pad_w,pad_h) then
    powerupget(pill[i].t)
+   spawnpillpuft(pill[i].x,pill[i].y,pill[i].t)
    -- remove pill
    del(pill,pill[i])
    sfx(11)
@@ -1072,8 +1121,11 @@ function updateball(bi)
   myball.y=nexty
 
   --trail particles
-  spawntrail(nextx,nexty)
-
+  if timer_mega > 0 then
+   spawnmtrail(nextx,nexty)
+  else
+   spawntrail(nextx,nexty)
+  end
   -- check if ball left screen
   if nexty > 127 then
    sfx(2)
@@ -1181,7 +1233,11 @@ function draw_game()
 
  -- balls
  for i=1,#ball do
-  circfill(ball[i].x,ball[i].y,ball_r, 10)
+  local ballc=10
+  if timer_mega > 0 then
+   ballc=14
+  end
+  circfill(ball[i].x,ball[i].y,ball_r, ballc)
   if ball[i].stuck then
    -- draw trajectory preview dots
    pset(ball[i].x+ball[i].dx*4*arrm,
