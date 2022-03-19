@@ -1,26 +1,25 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
-ball_x=1
-ball_y=33
-ball_dx=2
-ball_dy=2
-ball_r=2
-ball_dr=0.5
-
-pad_x=52
-pad_y=120
-pad_dx=0
-pad_w=24
-pad_h=3
-pad_c=7
-
 function _init()
  cls()
+ ball_x=1
+ ball_y=33
+ ball_dx=2
+ ball_dy=2
+ ball_r=2
+ ball_dr=0.5
+
+ pad_x=52
+ pad_y=120
+ pad_dx=0
+ pad_w=24
+ pad_h=3
+ pad_c=7
 end
 
 function _update()
- buttpress=false
+ local buttpress=false
  if btn(0) then
   --left
   pad_dx=-5
@@ -79,7 +78,6 @@ function ball_box(box_x,box_y,box_w,box_h)
  if ball_x+ball_r < box_x then
   return false
  end
-
  return true
 end
 
