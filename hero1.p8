@@ -18,6 +18,7 @@ __lua__
 function _init()
  cartdata("layzdevs_hero1")
  cls()
+
  mode="start"
  level=""
  debug=""
@@ -28,7 +29,7 @@ function _init()
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  levels[1] = "////x4b/s9s"
  --levels[1] = "b9bh9h"
- levels[2] = "b9bb9bb9bb9bb9bp9p"
+ --levels[2] = "b9bb9bb9bb9bb9bp9p"
 
  shake=0
 
@@ -41,7 +42,7 @@ function _init()
  blinkframe=0
  blinkspeed=8
 
- fadeperc=0
+ fadeperc=1
 
  startcountdown=-1
  govercountdown=-1
@@ -64,6 +65,8 @@ function _init()
  --reseths()
  loadhs()
  hschars={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}
+ hs_x=128
+ hs_dx=128
 end
 
 function startgame()
@@ -109,9 +112,8 @@ function nextlevel()
 
  levelnum+=1
  if levelnum > #levels then
-  -- we've beaten the gane
-  -- we need some kind of special
-  -- screen here
+  --error. game about to load
+  --a level that doesnt exist
   mode="start"
   return
  end
@@ -304,6 +306,12 @@ end
 
 function levelover()
  mode="leveloverwait"
+ govercountdown=60
+ blinkspeed=16
+end
+
+function wingame()
+ mode="winnerwait"
  govercountdown=60
  blinkspeed=16
 end
@@ -920,16 +928,66 @@ function _update60()
   update_levelover()
  elseif mode=="leveloverwait" then
   update_leveloverwait()
+ elseif mode=="winner" then
+  update_winner()
+ elseif mode=="winnerwait" then
+  update_winnerwait()
  end
 end
 
+function update_winnerwait()
+ govercountdown-=1
+ if govercountdown<=0 then
+  govercountdown= -1
+  mode="winner"
+ end
+end
+
+function update_winner()
+ if govercountdown<0 then
+  if btnp(4) then
+   govercountdown=80
+   blinkspeed=1
+   sfx(15)
+  end
+ else
+  govercountdown-=1
+  fadeperc=(80-govercountdown)/80
+  if govercountdown<=0 then
+   govercountdown= -1
+   blinkspeed=8
+   mode="start"
+   hs_x=128
+   hs_dx=0
+  end
+ end
+end
 
 function update_start()
+ --slide the high score list
+ if hs_x~=hs_dx then
+  hs_x+=(hs_dx-hs_x)/5
+ end
+
  if startcountdown<0 then
+  -- fade in game
+  if fadeperc~=0 then
+   fadeperc-=0.05
+   if fadeperc<0 then
+    fadeperc=0
+   end
+  end
+
   if btnp(4) then
    startcountdown=80
    blinkspeed=1
    sfx(12)
+  end
+  if btnp(0) then
+   hs_dx=0
+  end
+  if btnp(1) then
+   hs_dx=128
   end
  else
   startcountdown-=1
@@ -975,6 +1033,7 @@ function update_leveloverwait()
   mode="levelover"
  end
 end
+
 
 function update_levelover()
  if govercountdown<0 then
@@ -1067,7 +1126,11 @@ function update_game()
 
  if levelfinished() then
   _draw()
-  levelover()
+  if levelnum >= #levels then
+   wingame()
+  else
+   levelover()
+  end
  end
 
  -- powerup timers
@@ -1234,8 +1297,11 @@ function _draw()
   draw_levelover()
  elseif mode=="leveloverwait" then
   draw_game()
+ elseif mode=="winner" then
+  draw_winner()
+ elseif mode=="winnerwait" then
+  draw_game()
  end
-
  -- fade the screen
  pal()
  if fadeperc ~= 0 then
@@ -1243,11 +1309,18 @@ function _draw()
  end
 end
 
+function draw_winner()
+ rectfill(0,60,128,75,0)
+ print("congratulations!",35,62,7)
+ print("press ❎ for main menu",20,68,blink_w)
+end
+
 function draw_start()
  cls()
- --print("pico hero breakout",30,40,7)
- prinths(0)
+ print("pico hero breakout",30+(hs_x-128),40,7)
+ prinths(hs_x)
  print("press ❎ to start",32,80,blink_g)
+ print("press ⬅️ for high score list",9,97,3)
 end
 
 function draw_gameover()
@@ -1425,16 +1498,20 @@ function prinths(_x)
   -- number of rank
   print(i.." - ",_x+30,14+7*i,5)
   --name
+  local _c=7
+  if i==1 then
+   _c=blink_w
+  end
   local _name = hschars[hs1[i]]
   _name = _name..hschars[hs2[i]]
   _name = _name..hschars[hs3[i]]
 
-  print(_name,_x+45,14+7*i,7)
+  print(_name,_x+45,14+7*i,_c)
 
   -- actual score
   local _score=" "..hs[i]
 
-  print(_score,(_x+100)-(#_score*4),14+7*i,7)
+  print(_score,(_x+100)-(#_score*4),14+7*i,_c)
  end
 end
 __gfx__
