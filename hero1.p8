@@ -6,7 +6,10 @@ __lua__
 --     particles
 --      - death particles
 --      - brick particles
---      - collision particles
+--      - collision particles\
+--      - pickup particles
+--      - explosions
+--      - trails
 --     level setup
 -- 8. high score
 -- 9. ui
@@ -46,6 +49,9 @@ function _init()
  arrm=1
  arrm2=1
  arrmframe=0
+
+ --particles
+ part={}
 end
 
 function startgame()
@@ -569,12 +575,62 @@ function fadepal(_perc)
   pal(j,col,1)
  end
 end
+
+-- particle stuff
+
+-- add a particle
+function addpart(_x,_y,_type,_maxage,_col,_oldcol)
+ local _p = {}
+ _p.x=_x
+ _p.y=_y
+ _p.tpe=_type
+ _p.mage=_maxage
+ _p.age=0
+ _p.col=_col
+ _p.oldcol=_oldcol
+ add(part,_p)
+end
+
+-- spawn a trail particle
+function spawntrail(_x,_y)
+ local _ang = rnd()
+ local _ox = sin(_ang)*ball_r*0.6
+ local _oy = cos(_ang)*ball_r*0.6
+
+ addpart(_x+_ox,_y+_oy,0,15+rnd(15),10,9)
+end
+
+function updateparts()
+ local _p
+ for i=#part,1,-1 do
+  _p=part[i]
+  _p.age+=1
+  if _p.age>_p.mage then
+   del(part,part[i])
+  else
+   if (_p.age/_p.mage) > 0.5 then
+    _p.col = _p.oldcol
+   end
+  end
+ end
+end
+
+function drawparts()
+ for i=1,#part do
+  _p=part[i]
+  -- pixel particle
+  if _p.tpe == 0 then
+   pset(_p.x,_p.y,_p.col)
+  end
+ end
+end
 -->8
 -- update functions
 
 function _update60()
  doblink()
  doshake()
+ updateparts()
  if mode=="game" then
   update_game()
  elseif mode=="start" then
@@ -828,6 +884,9 @@ function updateball(bi)
   myball.x=nextx
   myball.y=nexty
 
+  --trail particles
+  spawntrail(nextx,nexty)
+
   -- check if ball left screen
   if nexty > 127 then
    sfx(2)
@@ -893,25 +952,6 @@ function draw_game()
  cls()
  --cls(1)
  rectfill(0,0,127,127,1)
- for i=1,#ball do
-  circfill(ball[i].x,ball[i].y,ball_r, 10)
-  if ball[i].stuck then
-   -- draw trajectory preview dots
-   pset(ball[i].x+ball[i].dx*4*arrm,
-        ball[i].y+ball[i].dy*4*arrm,
-        10)
-   pset(ball[i].x+ball[i].dx*4*arrm2,
-        ball[i].y+ball[i].dy*4*arrm2,
-        10)
-
-  -- line(ball[i].x+ball[i].dx*4*arrm,
-  --      ball[i].y+ball[i].dy*4*arrm,
-  --     ball[i].x+ball[i].dx*6*arrm,
-  --      ball[i].y+ball[i].dy*6*arrm,10)
-  end
- end
-
- rectfill(pad_x,pad_y,pad_x+pad_w,pad_y+pad_h,pad_c)
 
  --draw bricks
  for i=1,#bricks do
@@ -933,6 +973,7 @@ function draw_game()
   end
  end
 
+ -- pills
  for i=1,#pill do
   if pill[i].t==5 then
    palt(0,false)
@@ -942,6 +983,32 @@ function draw_game()
   palt()
  end
 
+ -- particles
+ drawparts()
+
+ -- balls
+ for i=1,#ball do
+  circfill(ball[i].x,ball[i].y,ball_r, 10)
+  if ball[i].stuck then
+   -- draw trajectory preview dots
+   pset(ball[i].x+ball[i].dx*4*arrm,
+        ball[i].y+ball[i].dy*4*arrm,
+        10)
+   pset(ball[i].x+ball[i].dx*4*arrm2,
+        ball[i].y+ball[i].dy*4*arrm2,
+        10)
+
+  -- line(ball[i].x+ball[i].dx*4*arrm,
+  --      ball[i].y+ball[i].dy*4*arrm,
+  --     ball[i].x+ball[i].dx*6*arrm,
+  --      ball[i].y+ball[i].dy*6*arrm,10)
+  end
+ end
+
+ --pad
+ rectfill(pad_x,pad_y,pad_x+pad_w,pad_y+pad_h,pad_c)
+
+ --ui
  rectfill(0,0,128,6,0)
  if debug!="" then
   print(debug,1,1,7)
