@@ -9,7 +9,6 @@ __lua__
 --      - collision particles\
 --      - pickup particles
 --      - explosions
---      - trails
 --     level setup
 -- 8. high score
 -- 9. ui
@@ -27,9 +26,11 @@ function _init()
  levelnum = 1
  levels={}
  --levels[1] = "x5b"
- levels[1] = "b9b/p9p/sbsbsbsbsb"
+ --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  --levels[1] = "////x4b/s9s"
+ levels[1] = "b9b/b9b/b9b"
+
  shake=0
 
  blink_g=7
@@ -343,8 +344,13 @@ function powerupget(_p)
 end
 
 function hitbrick(_i,_combo)
+
+
  if bricks[_i].t=="b" then
+  -- regular brick
   sfx(2+chain)
+  --spawn particles
+  shatterbrick(bricks[_i])
   bricks[_i].v=false
   if _combo then
    points+=10*chain*pointsmult
@@ -352,8 +358,10 @@ function hitbrick(_i,_combo)
    chain=mid(1,chain,7)
   end
  elseif bricks[_i].t=="i" then
+  --invincible brick
   sfx(10)
  elseif bricks[_i].t=="h" then
+  -- hardened brick
   if timer_mega > 0 then
    sfx(2+chain)
    bricks[_i].v=false
@@ -367,7 +375,10 @@ function hitbrick(_i,_combo)
    bricks[_i].t="b"
   end
  elseif bricks[_i].t=="p" then
+  -- powerup brick
   sfx(2+chain)
+  --spawn particles
+  shatterbrick(bricks[_i])
   bricks[_i].v=false
   if _combo then
    points+=10*chain*pointsmult
@@ -376,6 +387,7 @@ function hitbrick(_i,_combo)
   end
   spawnpill(bricks[_i].x,bricks[_i].y)
  elseif bricks[_i].t=="s" then
+  -- sposion brick
   sfx(2+chain)
   bricks[_i].t="zz"
   if _combo then
@@ -579,27 +591,43 @@ end
 -- particle stuff
 
 -- add a particle
-function addpart(_x,_y,_type,_maxage,_col,_oldcol)
+function addpart(_x,_y,_dx,_dy,_type,_maxage,_col)
  local _p = {}
  _p.x=_x
  _p.y=_y
+ _p.dx=_dx
+ _p.dy=_dy
  _p.tpe=_type
  _p.mage=_maxage
  _p.age=0
- _p.col=_col
- _p.oldcol=_oldcol
+ _p.col=0
+ _p.colarr=_col
  add(part,_p)
 end
 
 -- spawn a trail particle
 function spawntrail(_x,_y)
- local _ang = rnd()
- local _ox = sin(_ang)*ball_r*0.6
- local _oy = cos(_ang)*ball_r*0.6
+ if rnd()<0.5 then
+  local _ang = rnd()
+  local _ox = sin(_ang)*ball_r*0.3
+  local _oy = cos(_ang)*ball_r*0.3
 
- addpart(_x+_ox,_y+_oy,0,15+rnd(15),10,9)
+  addpart(_x+_ox,_y+_oy,0,0,0,15+rnd(15),{10,9})
+ end
 end
 
+-- shatter brick
+function shatterbrick(_b)
+ for i=0,10 do
+  local _ang = rnd()
+  local _dx = sin(_ang)*1
+  local _dy = cos(_ang)*1
+
+  addpart(_b.x,_b.y,_dx,_dy,1,60,{7})
+ end
+end
+
+-- big particle updater
 function updateparts()
  local _p
  for i=#part,1,-1 do
@@ -608,18 +636,33 @@ function updateparts()
   if _p.age>_p.mage then
    del(part,part[i])
   else
-   if (_p.age/_p.mage) > 0.5 then
-    _p.col = _p.oldcol
+   -- change colors
+   if #_p.colarr==1 then
+    _p.col = _p.colarr[1]
+   else
+    local _ci=_p.age/_p.mage
+    _ci=1+flr(_ci*#_p.colarr)
+    _p.col = _p.colarr[_ci]
    end
+
+   --appy gravity
+   if _p.tpe == 1 then
+    _p.dy+=0.1
+   end
+
+   --move particle
+   _p.x+=_p.dx
+   _p.y+=_p.dy
   end
  end
 end
 
+-- big particle drawer
 function drawparts()
  for i=1,#part do
   _p=part[i]
   -- pixel particle
-  if _p.tpe == 0 then
+  if _p.tpe == 0 or _p.tpe == 1 then
    pset(_p.x,_p.y,_p.col)
   end
  end
@@ -973,6 +1016,9 @@ function draw_game()
   end
  end
 
+ -- particles
+ drawparts()
+
  -- pills
  for i=1,#pill do
   if pill[i].t==5 then
@@ -982,9 +1028,6 @@ function draw_game()
   spr(pill[i].t,pill[i].x,pill[i].y)
   palt()
  end
-
- -- particles
- drawparts()
 
  -- balls
  for i=1,#ball do
