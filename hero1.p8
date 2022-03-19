@@ -58,9 +58,12 @@ function _init()
 
  --highscrore
  hs={}
+ hs1={}
+ hs2={}
+ hs3={}
+ --reseths()
  loadhs()
- hs[1]=1000
- savehs()
+ hschars={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}
 end
 
 function startgame()
@@ -1343,10 +1346,37 @@ end
 -->8
 --highscore tab
 
+--add a new high score
+function addhs(_score,_c1,_c2,_c3)
+ add(hs,_score)
+ add(hs1,_c1)
+ add(hs2,_c2)
+ add(hs3,_c3)
+ sorths()
+end
+
+--sort high score list
+function sorths()
+ for i=1,#hs do
+  local j = i
+  while j > 1 and hs[j-1] < hs[j] do
+   hs[j],hs[j-1]=hs[j-1],hs[j]
+   hs1[j],hs1[j-1]=hs1[j-1],hs1[j]
+   hs2[j],hs2[j-1]=hs2[j-1],hs2[j]
+   hs3[j],hs3[j-1]=hs3[j-1],hs3[j]
+   j = j - 1
+  end
+ end
+end
+
 --resets the high score list
 function reseths()
  --create default values
- hs={500,400,300,200,100}
+ hs={10,300,400,200,1000}
+ hs1={1,1,8,1,1}
+ hs2={1,6,1,1,14}
+ hs3={10,1,1,12,1}
+ sorths()
  savehs()
 end
 
@@ -1359,8 +1389,12 @@ function loadhs()
   _slot+=1
   for i=1,5 do
    hs[i]=dget(_slot)
-   _slot+=1
+   hs1[i]=dget(_slot+1)
+   hs2[i]=dget(_slot+2)
+   hs3[i]=dget(_slot+3)
+   _slot+=4
   end
+  sorths()
  else
   --file is empty
   reseths()
@@ -1375,17 +1409,32 @@ function savehs()
  _slot=1
  for i=1,5 do
   dset(_slot,hs[i])
-  _slot+=1
+  dset(_slot+1,hs1[i])
+  dset(_slot+2,hs2[i])
+  dset(_slot+3,hs3[i])
+  _slot+=4
  end
 end
 
 --prints the high score list
 function prinths(_x)
+ rectfill(_x+29,8,_x+99,16,8)
+ print("high score list",_x+36,10,7)
+
  for i=1,5 do
-  print(i.." - ",_x+30,10+7*i,7)
+  -- number of rank
+  print(i.." - ",_x+30,14+7*i,5)
+  --name
+  local _name = hschars[hs1[i]]
+  _name = _name..hschars[hs2[i]]
+  _name = _name..hschars[hs3[i]]
+
+  print(_name,_x+45,14+7*i,7)
+
+  -- actual score
   local _score=" "..hs[i]
 
-  print(_score,(_x+100)-(#_score*4),10+7*i,7)
+  print(_score,(_x+100)-(#_score*4),14+7*i,7)
  end
 end
 __gfx__
