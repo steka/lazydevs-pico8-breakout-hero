@@ -30,9 +30,17 @@ function _init()
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  --levels[1] = "////x4b/s9s"
  shake=0
+
+ blink_g=7
+ blink_g_i=1
+ blinkframe=0
+ blinkspeed=8
+
+ startcountdown=-1
 end
 
 function _update60()
+ doblink()
  if mode=="game" then
   update_game()
  elseif mode=="start" then
@@ -45,8 +53,16 @@ function _update60()
 end
 
 function update_start()
- if btnp(4) then
-  startgame()
+ if startcountdown<0 the
+  if btnp(4) then
+   startcountdown=60
+  end
+ else
+  startcountdown-=1
+  if startcountdown<=0 then
+   startcountdown<0
+   startgame()
+  end
  end
 end
 
@@ -666,7 +682,7 @@ end
 function draw_start()
  cls()
  print("pico hero breakout",30,40,7)
- print("press ❎ to start",32,80,11)
+ print("press ❎ to start",32,80,blink_g)
 end
 
 function draw_gameover()
@@ -778,7 +794,8 @@ function deflx_ball_box(bx,by,bdx,bdy,tx,ty,tw,th)
  end
 end
 
-------- juicy stuff --------
+-->8
+-- juicy stuff --
 
 function doshake()
  -- -16 +16
@@ -795,6 +812,21 @@ function doshake()
   shake=0
  end
 end
+
+-- do the blinking
+function doblink()
+ local g_seq = {3,11,7,11}
+ blinkframe+=1
+ if blinkframe>blinkspeed then
+  blinkframe=0
+  blink_g_i += 1
+  if blink_g_i > #g_seq then
+   blink_g_i = 1
+  end
+  blink_g = g_seq[blink_g_i]
+ end
+end
+
 __gfx__
 0000000006777760067777600677776006777760f677776f06777760067777600000000000000000000000000000000000000000000000000000000000000000
 00000000559949955576777555b33bb555c1c1c55508800555e222e5558288850000000000000000000000000000000000000000000000000000000000000000
