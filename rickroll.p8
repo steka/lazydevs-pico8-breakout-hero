@@ -1,21 +1,42 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
-poo=1
-pee=1
+poo=1 --this is the x coordinate
+poospeed=1
+
+pee=40
+peespeed=1
+
 col=0
 
 butt="♥"
+
 awsome=true
 
 function _init()
- cls()
 end
 
 function _update()
- poo=poo+1
- pee=pee+1
+ poo=poo+poospeed
+ pee=pee+peespeed
+
  col=col+1
+
+ --this is where we check
+ --if the heart hits the edges
+ if poo>122 then
+  poospeed=-1
+ end
+ if poo<0 then
+  poospeed=1
+ end
+ if pee>122 then
+  peespeed=-1
+ end
+ if pee<0 then
+  peespeed=1
+ end
+
 end
 
 function _draw()
