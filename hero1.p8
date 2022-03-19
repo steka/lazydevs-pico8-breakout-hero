@@ -3,8 +3,6 @@ version 35
 __lua__
 --goals
 -- 7. juicyness
---     text blinking
---     arrow anim
 --     particles
 --      - death particles
 --      - brick particles
@@ -45,6 +43,9 @@ function _init()
  startcountdown=-1
  govercountdown=-1
 
+ arrm=1
+ arrm2=1
+ arrmframe=0
 end
 
 function startgame()
@@ -504,6 +505,7 @@ function doblink()
  local g_seq = {3,11,7,11}
  local w_seq = {5,6,7,6}
 
+ -- text blinking
  blinkframe+=1
  if blinkframe>blinkspeed then
   blinkframe=0
@@ -519,8 +521,22 @@ function doblink()
    blink_w_i=1
   end
   blink_w=w_seq[blink_w_i]
-
  end
+
+ -- trajectory preview anim
+ -- first dot
+ arrmframe+=1
+ if arrmframe>30 then
+  arrmframe=0
+ end
+ arrm=1+(2*(arrmframe/30))
+ -- second dot
+ local af2=arrmframe+15
+ if af2>30 then
+  af2 = af2-30
+ end
+ arrm2=1+(2*(af2/30))
+
 end
 
 -- fading
@@ -586,7 +602,6 @@ function update_start()
   if startcountdown<=0 then
    startcountdown= -1
    blinkspeed=8
-   fadeperc=0
    startgame()
   end
  end
@@ -605,7 +620,6 @@ function update_gameover()
   if govercountdown<=0 then
    govercountdown= -1
    blinkspeed=8
-   fadeperc=0
    startgame()
   end
  end
@@ -628,6 +642,14 @@ end
 function update_game()
  local buttpress=false
  local nextx,nexty,brickhit
+
+ -- fade in game
+ if fadeperc~=0 then
+  fadeperc-=0.05
+  if fadeperc<0 then
+   fadeperc=0
+  end
+ end
 
  if timer_expand > 0 then
   -- check if pad should grow
@@ -874,7 +896,18 @@ function draw_game()
  for i=1,#ball do
   circfill(ball[i].x,ball[i].y,ball_r, 10)
   if ball[i].stuck then
-   line(ball[i].x+ball[i].dx*4,ball[i].y+ball[i].dy*4,ball[i].x+ball[i].dx*6,ball[i].y+ball[i].dy*6,10)
+   -- draw trajectory preview dots
+   pset(ball[i].x+ball[i].dx*4*arrm,
+        ball[i].y+ball[i].dy*4*arrm,
+        10)
+   pset(ball[i].x+ball[i].dx*4*arrm2,
+        ball[i].y+ball[i].dy*4*arrm2,
+        10)
+
+  -- line(ball[i].x+ball[i].dx*4*arrm,
+  --      ball[i].y+ball[i].dy*4*arrm,
+  --     ball[i].x+ball[i].dx*6*arrm,
+  --      ball[i].y+ball[i].dy*6*arrm,10)
   end
  end
 
