@@ -33,37 +33,18 @@ function _init()
 
  blink_g=7
  blink_g_i=1
+
+ blink_w=7
+ blink_w_i=1
+
  blinkframe=0
  blinkspeed=8
 
+ fadeperc=0
+
  startcountdown=-1
-end
+ govercountdown=-1
 
-function _update60()
- doblink()
- if mode=="game" then
-  update_game()
- elseif mode=="start" then
-  update_start()
- elseif mode=="gameover" then
-  update_gameover()
- elseif mode=="levelover" then
-  update_levelover()
- end
-end
-
-function update_start()
- if startcountdown<0 the
-  if btnp(4) then
-   startcountdown=60
-  end
- else
-  startcountdown-=1
-  if startcountdown<=0 then
-   startcountdown<0
-   startgame()
-  end
- end
 end
 
 function startgame()
@@ -87,7 +68,7 @@ function startgame()
  buildbricks(level)
  --brick_y=20
 
- lives=3
+ lives=0
  points=0
  sticky = false
 
@@ -292,16 +273,349 @@ function sign(n)
 end
 
 function gameover()
- mode="gameover"
+ mode="gameoverwait"
+ govercountdown=60
+ blinkspeed=16
 end
 
 function levelover()
  mode="levelover"
 end
 
+function releasestuck()
+ for i=1,#ball do
+  if ball[i].stuck then
+   ball[i].x=mid(3,ball[i].x,124)
+   ball[i].stuck=false
+  end
+ end
+end
+
+function pointstuck(sign)
+ for i=1,#ball do
+  if ball[i].stuck then
+   ball[i].dx=abs(ball[i].dx)*sign
+  end
+ end
+end
+
+function powerupget(_p)
+ if _p == 1 then
+  -- slowdown
+  timer_slow = 900
+ elseif _p == 2 then
+  -- life
+  lives+=1
+ elseif _p == 3 then
+  -- catch
+  -- check if there are stuck balls
+  hasstuck=false
+  for i=1,#ball do
+   if ball[i].stuck then
+    hasstuck=true
+   end
+  end
+  if hasstuck==false then
+   sticky = true
+  end
+ elseif _p == 4 then
+  -- expand
+  timer_expand = 900
+  timer_reduce = 0
+ elseif _p == 5 then
+  -- reduce
+  timer_reduce = 900
+  timer_expand = 0
+ elseif _p == 6 then
+  -- megaball
+  timer_mega = 900
+ elseif _p == 7 then
+  -- multiball
+  multiball()
+ end
+end
+
+function hitbrick(_i,_combo)
+ if bricks[_i].t=="b" then
+  sfx(2+chain)
+  bricks[_i].v=false
+  if _combo then
+   points+=10*chain*pointsmult
+   chain+=1
+   chain=mid(1,chain,7)
+  end
+ elseif bricks[_i].t=="i" then
+  sfx(10)
+ elseif bricks[_i].t=="h" then
+  if timer_mega > 0 then
+   sfx(2+chain)
+   bricks[_i].v=false
+   if _combo then
+    points+=10*chain*pointsmult
+    chain+=1
+    chain=mid(1,chain,7)
+   end
+  else
+   sfx(10)
+   bricks[_i].t="b"
+  end
+ elseif bricks[_i].t=="p" then
+  sfx(2+chain)
+  bricks[_i].v=false
+  if _combo then
+   points+=10*chain*pointsmult
+   chain+=1
+   chain=mid(1,chain,7)
+  end
+  spawnpill(bricks[_i].x,bricks[_i].y)
+ elseif bricks[_i].t=="s" then
+  sfx(2+chain)
+  bricks[_i].t="zz"
+  if _combo then
+   points+=10*chain*pointsmult
+   chain+=1
+   chain=mid(1,chain,7)
+  end
+ end
+end
+
+function spawnpill(_x,_y)
+ local _t
+ local _pill
+
+ _t = flr(rnd(7))+1
+ --_t = flr(rnd(2))
+ --if _t== 0 then
+ -- _t = 7
+ --else
+ -- _t = 3
+ --end
+
+
+ _pill={}
+ _pill.x = _x
+ _pill.y = _y
+ _pill.t = _t
+ add(pill,_pill)
+end
+
+function checkexplosions()
+ for i=1,#bricks do
+  if bricks[i].t == "zz" and bricks[i].v then
+   bricks[i].t="z"
+  end
+ end
+
+ for i=1,#bricks do
+  if bricks[i].t == "z" and bricks[i].v then
+   explodebrick(i)
+   shake+=0.4
+   if shake>1 then
+    shake=1
+   end
+  end
+ end
+
+ for i=1,#bricks do
+  if bricks[i].t == "zz" then
+   bricks[i].t="z"
+  end
+ end
+end
+
+function explodebrick(_i)
+ bricks[_i].v=false
+ for j=1,#bricks do
+  if j!=_i
+  and bricks[j].v
+  and abs(bricks[j].x-bricks[_i].x) <= (brick_w+2)
+  and abs(bricks[j].y-bricks[_i].y) <= (brick_h+2)
+  then
+   hitbrick(j,false)
+  end
+ end
+end
+
+function ball_box(bx,by,box_x,box_y,box_w,box_h)
+ -- checks for a collion of the ball with a rectangle
+ if by-ball_r > box_y+box_h then return false end
+ if by+ball_r < box_y then return false end
+ if bx-ball_r > box_x+box_w then return false end
+ if bx+ball_r < box_x then return false end
+ return true
+end
+
+function box_box(box1_x,box1_y,box1_w,box1_h,box2_x,box2_y,box2_w,box2_h)
+ -- checks for a collion of the two boxes
+ if box1_y > box2_y+box2_h then return false end
+ if box1_y+box1_h < box2_y then return false end
+ if box1_x > box2_x+box2_w then return false end
+ if box1_x+box1_w < box2_x then return false end
+ return true
+end
+
+function deflx_ball_box(bx,by,bdx,bdy,tx,ty,tw,th)
+ local slp = bdy / bdx
+ local cx, cy
+ if bdx == 0 then
+  return false
+ elseif bdy == 0 then
+  return true
+ elseif slp > 0 and bdx > 0 then
+  cx = tx - bx
+  cy = ty - by
+  return cx > 0 and cy/cx < slp
+ elseif slp < 0 and bdx > 0 then
+  cx = tx - bx
+  cy = ty + th - by
+  return cx > 0 and cy/cx >= slp
+ elseif slp > 0 and bdx < 0 then
+  cx = tx + tw - bx
+  cy = ty + th - by
+  return cx < 0 and cy/cx <= slp
+ else
+  cx = tx + tw - bx
+  cy = ty - by
+  return cx < 0 and cy/cx >= slp
+ end
+end
+
+-->8
+-- juicy stuff --
+
+function doshake()
+ -- -16 +16
+ local shakex=16-rnd(32)
+ local shakey=16-rnd(32)
+
+ shakex=shakex*shake
+ shakey=shakey*shake
+
+ camera(shakex,shakey)
+
+ shake=shake*0.95
+ if shake<0.05 then
+  shake=0
+ end
+end
+
+-- do the blinking
+function doblink()
+ local g_seq = {3,11,7,11}
+ local w_seq = {5,6,7,6}
+
+ blinkframe+=1
+ if blinkframe>blinkspeed then
+  blinkframe=0
+
+  blink_g_i+=1
+  if blink_g_i > #g_seq then
+   blink_g_i=1
+  end
+  blink_g=g_seq[blink_g_i]
+
+  blink_w_i+=1
+  if blink_w_i > #w_seq then
+   blink_w_i=1
+  end
+  blink_w=w_seq[blink_w_i]
+
+ end
+end
+
+-- fading
+function fadepal(_perc)
+ -- 0 means normal
+ -- 1 is completely black
+
+ local p=flr(mid(0,_perc,1)*100)
+
+ -- these are helper variables
+ local kmax,col,dpal,j,k
+ dpal={0,1,1, 2,1,13,6,
+          4,4,9,3, 13,1,13,14}
+
+ -- now we go trough all colors
+ for j=1,15 do
+  --grab the current color
+  col = j
+
+  --now calculate how many
+  --times we want to fade the
+  --color.
+  kmax=(p+(j*1.46))/22
+  for k=1,kmax do
+   col=dpal[col]
+  end
+
+  --finally, we change the
+  --palette
+  pal(j,col,1)
+ end
+end
+-->8
+-- update functions
+
+function _update60()
+ doblink()
+ doshake()
+ if mode=="game" then
+  update_game()
+ elseif mode=="start" then
+  update_start()
+ elseif mode=="gameover" then
+  update_gameover()
+ elseif mode=="gameoverwait" then
+  update_gameoverwait()
+ elseif mode=="levelover" then
+  update_levelover()
+ end
+end
+
+
+function update_start()
+ if startcountdown<0 then
+  if btnp(4) then
+   startcountdown=80
+   blinkspeed=1
+   sfx(12)
+  end
+ else
+  startcountdown-=1
+  fadeperc=(80-startcountdown)/80
+  if startcountdown<=0 then
+   startcountdown= -1
+   blinkspeed=8
+   fadeperc=0
+   startgame()
+  end
+ end
+end
+
 function update_gameover()
- if btnp(4) then
-  startgame()
+ if govercountdown<0 then
+  if btnp(4) then
+   govercountdown=80
+   blinkspeed=1
+   sfx(12)
+  end
+ else
+  govercountdown-=1
+  fadeperc=(80-govercountdown)/80
+  if govercountdown<=0 then
+   govercountdown= -1
+   blinkspeed=8
+   fadeperc=0
+   startgame()
+  end
+ end
+end
+
+function update_gameoverwait()
+ govercountdown-=1
+ if govercountdown<=0 then
+  govercountdown= -1
+  mode="gameover"
  end
 end
 
@@ -511,171 +825,26 @@ function updateball(bi)
 
  end -- end of sticky if
 end
-
-function releasestuck()
- for i=1,#ball do
-  if ball[i].stuck then
-   ball[i].x=mid(3,ball[i].x,124)
-   ball[i].stuck=false
-  end
- end
-end
-
-function pointstuck(sign)
- for i=1,#ball do
-  if ball[i].stuck then
-   ball[i].dx=abs(ball[i].dx)*sign
-  end
- end
-end
-
-function powerupget(_p)
- if _p == 1 then
-  -- slowdown
-  timer_slow = 900
- elseif _p == 2 then
-  -- life
-  lives+=1
- elseif _p == 3 then
-  -- catch
-  -- check if there are stuck balls
-  hasstuck=false
-  for i=1,#ball do
-   if ball[i].stuck then
-    hasstuck=true
-   end
-  end
-  if hasstuck==false then
-   sticky = true
-  end
- elseif _p == 4 then
-  -- expand
-  timer_expand = 900
-  timer_reduce = 0
- elseif _p == 5 then
-  -- reduce
-  timer_reduce = 900
-  timer_expand = 0
- elseif _p == 6 then
-  -- megaball
-  timer_mega = 900
- elseif _p == 7 then
-  -- multiball
-  multiball()
- end
-end
-
-function hitbrick(_i,_combo)
- if bricks[_i].t=="b" then
-  sfx(2+chain)
-  bricks[_i].v=false
-  if _combo then
-   points+=10*chain*pointsmult
-   chain+=1
-   chain=mid(1,chain,7)
-  end
- elseif bricks[_i].t=="i" then
-  sfx(10)
- elseif bricks[_i].t=="h" then
-  if timer_mega > 0 then
-   sfx(2+chain)
-   bricks[_i].v=false
-   if _combo then
-    points+=10*chain*pointsmult
-    chain+=1
-    chain=mid(1,chain,7)
-   end
-  else
-   sfx(10)
-   bricks[_i].t="b"
-  end
- elseif bricks[_i].t=="p" then
-  sfx(2+chain)
-  bricks[_i].v=false
-  if _combo then
-   points+=10*chain*pointsmult
-   chain+=1
-   chain=mid(1,chain,7)
-  end
-  spawnpill(bricks[_i].x,bricks[_i].y)
- elseif bricks[_i].t=="s" then
-  sfx(2+chain)
-  bricks[_i].t="zz"
-  if _combo then
-   points+=10*chain*pointsmult
-   chain+=1
-   chain=mid(1,chain,7)
-  end
- end
-end
-
-function spawnpill(_x,_y)
- local _t
- local _pill
-
- _t = flr(rnd(7))+1
- --_t = flr(rnd(2))
- --if _t== 0 then
- -- _t = 7
- --else
- -- _t = 3
- --end
-
-
- _pill={}
- _pill.x = _x
- _pill.y = _y
- _pill.t = _t
- add(pill,_pill)
-end
-
-function checkexplosions()
- for i=1,#bricks do
-  if bricks[i].t == "zz" and bricks[i].v then
-   bricks[i].t="z"
-  end
- end
-
- for i=1,#bricks do
-  if bricks[i].t == "z" and bricks[i].v then
-   explodebrick(i)
-   shake+=0.4
-   if shake>1 then
-    shake=1
-   end
-  end
- end
-
- for i=1,#bricks do
-  if bricks[i].t == "zz" then
-   bricks[i].t="z"
-  end
- end
-end
-
-function explodebrick(_i)
- bricks[_i].v=false
- for j=1,#bricks do
-  if j!=_i
-  and bricks[j].v
-  and abs(bricks[j].x-bricks[_i].x) <= (brick_w+2)
-  and abs(bricks[j].y-bricks[_i].y) <= (brick_h+2)
-  then
-   hitbrick(j,false)
-  end
- end
-end
+-->8
+-- draw functions
 
 function _draw()
- doshake()
  if mode=="game" then
   draw_game()
  elseif mode=="start" then
   draw_start()
+ elseif mode=="gameoverwait" then
+  draw_game()
  elseif mode=="gameover" then
   draw_gameover()
  elseif mode=="levelover" then
   draw_levelover()
+ end
+
+ -- fade the screen
+ pal()
+ if fadeperc ~= 0 then
+  fadepal(fadeperc)
  end
 end
 
@@ -688,7 +857,7 @@ end
 function draw_gameover()
  rectfill(0,60,128,75,0)
  print("game over",46,62,7)
- print("press ❎ to restart",27,68,6)
+ print("press ❎ to restart",27,68,blink_w)
 end
 
 function draw_levelover()
@@ -750,83 +919,6 @@ function draw_game()
  end
 end
 
-function ball_box(bx,by,box_x,box_y,box_w,box_h)
- -- checks for a collion of the ball with a rectangle
- if by-ball_r > box_y+box_h then return false end
- if by+ball_r < box_y then return false end
- if bx-ball_r > box_x+box_w then return false end
- if bx+ball_r < box_x then return false end
- return true
-end
-
-function box_box(box1_x,box1_y,box1_w,box1_h,box2_x,box2_y,box2_w,box2_h)
- -- checks for a collion of the two boxes
- if box1_y > box2_y+box2_h then return false end
- if box1_y+box1_h < box2_y then return false end
- if box1_x > box2_x+box2_w then return false end
- if box1_x+box1_w < box2_x then return false end
- return true
-end
-
-function deflx_ball_box(bx,by,bdx,bdy,tx,ty,tw,th)
- local slp = bdy / bdx
- local cx, cy
- if bdx == 0 then
-  return false
- elseif bdy == 0 then
-  return true
- elseif slp > 0 and bdx > 0 then
-  cx = tx - bx
-  cy = ty - by
-  return cx > 0 and cy/cx < slp
- elseif slp < 0 and bdx > 0 then
-  cx = tx - bx
-  cy = ty + th - by
-  return cx > 0 and cy/cx >= slp
- elseif slp > 0 and bdx < 0 then
-  cx = tx + tw - bx
-  cy = ty + th - by
-  return cx < 0 and cy/cx <= slp
- else
-  cx = tx + tw - bx
-  cy = ty - by
-  return cx < 0 and cy/cx >= slp
- end
-end
-
--->8
--- juicy stuff --
-
-function doshake()
- -- -16 +16
- local shakex=16-rnd(32)
- local shakey=16-rnd(32)
-
- shakex=shakex*shake
- shakey=shakey*shake
-
- camera(shakex,shakey)
-
- shake=shake*0.95
- if shake<0.05 then
-  shake=0
- end
-end
-
--- do the blinking
-function doblink()
- local g_seq = {3,11,7,11}
- blinkframe+=1
- if blinkframe>blinkspeed then
-  blinkframe=0
-  blink_g_i += 1
-  if blink_g_i > #g_seq then
-   blink_g_i = 1
-  end
-  blink_g = g_seq[blink_g_i]
- end
-end
-
 __gfx__
 0000000006777760067777600677776006777760f677776f06777760067777600000000000000000000000000000000000000000000000000000000000000000
 00000000559949955576777555b33bb555c1c1c55508800555e222e5558288850000000000000000000000000000000000000000000000000000000000000000
@@ -849,3 +941,4 @@ __sfx__
 00020000363603c3603c3503c33000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000200003946035460354503543000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000100003a0503505030050290403b0503b0503b0501f0401d0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000500002a0502a0503203032030290202902032020320202a0102a01032010320102a0102a01032010320102a0102a0100000000000000000000000000000000000000000000000000000000000000000000000
