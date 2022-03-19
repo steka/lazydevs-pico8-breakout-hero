@@ -1,19 +1,28 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
-cls()
-print("never gona give u up")
-print("never gona let u down")
-print("never gona run around")
-print("and desert u")
+poo=1
+pee=1
+col=0
 
+butt="♥"
+awsome=true
 
+function _init()
+ cls()
+end
 
+function _update()
+ poo=poo+1
+ pee=pee+1
+ col=col+1
+end
 
+function _draw()
+ cls()
+ print(butt,poo,pee,col)
+end
 
-
-
-print("♥",60,85,8)
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
