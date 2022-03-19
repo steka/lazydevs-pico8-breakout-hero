@@ -393,12 +393,10 @@ function update_game()
   if pill[i].y > 128 then
    -- remove pill
    del(pill,pill[i])
-   i-=1
   elseif box_box(pill[i].x,pill[i].y,8,6,pad_x,pad_y,pad_w,pad_h) then
    powerupget(pill[i].t)
    -- remove pill
    del(pill,pill[i])
-   i-=1
    sfx(11)
   end
  end
