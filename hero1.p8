@@ -9,7 +9,6 @@ __lua__
 --      - collision particles\
 --      - pickup particles
 --      - explosions
---     level setup
 -- 8. high score
 -- 9. ui
 --    - powerup messages
@@ -29,7 +28,7 @@ function _init()
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  --levels[1] = "////x4b/s9s"
- levels[1] = "b9b/b9b/b9b"
+ levels[1] = "b9bb9bb9bb9bb9bb9b"
 
  shake=0
 
@@ -173,7 +172,9 @@ function addbrick(_i,_t)
  _b.t=_t
  _b.fsh=0
  _b.ox=0
- _b.oy=0
+ _b.oy=-(128+rnd(128))
+ _b.dx=0
+ _b.dy=rnd(64)
 
  add(bricks,_b)
 end
@@ -350,7 +351,7 @@ function powerupget(_p)
 end
 
 function hitbrick(_i,_combo)
- local fshtime=8
+ local fshtime=10
 
  if bricks[_i].t=="b" then
   -- regular brick
@@ -628,8 +629,8 @@ end
 -- shatter brick
 function shatterbrick(_b,_vx,_vy)
  --bump the brick
- _b.ox = _vx*2
- _b.oy = _vy*2
+ _b.dx = _vx*1
+ _b.dy = _vy*1
  for _x= 0,brick_w do
   for _y= 0,brick_h do
    if rnd()<0.5 then
@@ -689,13 +690,39 @@ function drawparts()
 end
 
 --rebound bumped bricks
-function reboundbricks()
+function animatebricks()
  for i=1,#bricks do
   local _b=bricks[i]
   if _b.v or _b.fsh>0 then
-   if _b.ox~=0 or _b.oy~=0 then
-    _b.ox-=sgn(_b.ox)
-    _b.oy-=sgn(_b.oy)
+   -- see if brick is moving
+   if _b.dx~=0 or _b.dy~=0 or _b.ox~=0 or _b.oy~=0 then
+    --apply the speed
+    _b.ox+=_b.dx
+    _b.oy+=_b.dy
+
+    --change the speed
+    --brick wants to go to zero
+    _b.dx-=_b.ox/10
+    _b.dy-=_b.oy/10
+
+    -- dampening
+    if abs(_b.dx)>(_b.ox) then
+     _b.dx=_b.dx/1.3
+    end
+    if abs(_b.dy)>(_b.oy) then
+     _b.dy=_b.dy/1.3
+    end
+
+    -- snap to zero if close
+    if abs(_b.ox)<0.2 and abs(_b.dx)<0.25 then
+     _b.ox=0
+     _b.dx=0
+    end
+    if abs(_b.oy)<0.2 and abs(_b.dy)<0.25 then
+     _b.oy=0
+     _b.dy=0
+    end
+
    end
   end
  end
@@ -861,7 +888,7 @@ function update_game()
  end
 
  --animate bricks
- reboundbricks()
+ animatebricks()
 
 end
 
