@@ -53,6 +53,9 @@ function _init()
 
  --particles
  part={}
+
+ lasthitx=0
+ lasthity=0
 end
 
 function startgame()
@@ -168,6 +171,9 @@ function addbrick(_i,_t)
  _b.y=20+flr((_i-1)/11)*(brick_h+2)
  _b.v=true
  _b.t=_t
+ _b.fsh=0
+ _b.ox=0
+ _b.oy=0
 
  add(bricks,_b)
 end
@@ -344,13 +350,14 @@ function powerupget(_p)
 end
 
 function hitbrick(_i,_combo)
-
+ local fshtime=8
 
  if bricks[_i].t=="b" then
   -- regular brick
   sfx(2+chain)
   --spawn particles
-  shatterbrick(bricks[_i])
+  shatterbrick(bricks[_i],lasthitx,lasthity)
+  bricks[_i].fsh=fshtime
   bricks[_i].v=false
   if _combo then
    points+=10*chain*pointsmult
@@ -364,6 +371,7 @@ function hitbrick(_i,_combo)
   -- hardened brick
   if timer_mega > 0 then
    sfx(2+chain)
+   bricks[_i].fsh=fshtime
    bricks[_i].v=false
    if _combo then
     points+=10*chain*pointsmult
@@ -378,7 +386,8 @@ function hitbrick(_i,_combo)
   -- powerup brick
   sfx(2+chain)
   --spawn particles
-  shatterbrick(bricks[_i])
+  shatterbrick(bricks[_i],lasthitx,lasthity)
+  bricks[_i].fsh=fshtime
   bricks[_i].v=false
   if _combo then
    points+=10*chain*pointsmult
@@ -617,13 +626,20 @@ function spawntrail(_x,_y)
 end
 
 -- shatter brick
-function shatterbrick(_b)
- for i=0,10 do
-  local _ang = rnd()
-  local _dx = sin(_ang)*1
-  local _dy = cos(_ang)*1
+function shatterbrick(_b,_vx,_vy)
+ --bump the brick
+ _b.ox = _vx*2
+ _b.oy = _vy*2
+ for _x= 0,brick_w do
+  for _y= 0,brick_h do
+   if rnd()<0.5 then
+    local _ang = rnd()
+    local _dx = sin(_ang)*rnd(2)+(_vx/2)
+    local _dy = cos(_ang)*rnd(2)+(_vy/2)
 
-  addpart(_b.x,_b.y,_dx,_dy,1,60,{7})
+    addpart(_b.x+_x,_b.y+_y,_dx,_dy,1,80,{7,6,5})
+   end
+  end
  end
 end
 
@@ -634,6 +650,10 @@ function updateparts()
   _p=part[i]
   _p.age+=1
   if _p.age>_p.mage then
+   del(part,part[i])
+  elseif _p.x < -20 or _p.x > 148 then
+   del(part,part[i])
+  elseif _p.y < -20 or _p.y > 148 then
    del(part,part[i])
   else
    -- change colors
@@ -647,7 +667,7 @@ function updateparts()
 
    --appy gravity
    if _p.tpe == 1 then
-    _p.dy+=0.1
+    _p.dy+=0.05
    end
 
    --move particle
@@ -664,6 +684,19 @@ function drawparts()
   -- pixel particle
   if _p.tpe == 0 or _p.tpe == 1 then
    pset(_p.x,_p.y,_p.col)
+  end
+ end
+end
+
+--rebound bumped bricks
+function reboundbricks()
+ for i=1,#bricks do
+  local _b=bricks[i]
+  if _b.v or _b.fsh>0 then
+   if _b.ox~=0 or _b.oy~=0 then
+    _b.ox-=sgn(_b.ox)
+    _b.oy-=sgn(_b.oy)
+   end
   end
  end
 end
@@ -827,6 +860,9 @@ function update_game()
   timer_reduce-=1
  end
 
+ --animate bricks
+ reboundbricks()
+
 end
 
 function updateball(bi)
@@ -913,6 +949,8 @@ function updateball(bi)
     if not(brickhit) then
      if (timer_mega > 0 and bricks[i].t=="i")
      or timer_mega <= 0 then
+      lasthitx=myball.dx
+      lasthity=myball.dy
       if deflx_ball_box(myball.x,myball.y,myball.dx,myball.dy,bricks[i].x,bricks[i].y,brick_w,brick_h) then
        myball.dx = -myball.dx
       else
@@ -998,21 +1036,27 @@ function draw_game()
 
  --draw bricks
  for i=1,#bricks do
-  if bricks[i].v then
-   if bricks[i].t == "b" then
+  local _b=bricks[i]
+  if _b.v or _b.fsh>0 then
+   if _b.fsh>0 then
+    brickcol = 7
+    _b.fsh-=1
+   elseif _b.t == "b" then
     brickcol = 14
-   elseif bricks[i].t == "i" then
+   elseif _b.t == "i" then
     brickcol = 6
-   elseif bricks[i].t == "h" then
+   elseif _b.t == "h" then
     brickcol = 15
-   elseif bricks[i].t == "s" then
+   elseif _b.t == "s" then
     brickcol = 9
-   elseif bricks[i].t == "p" then
+   elseif _b.t == "p" then
     brickcol = 12
-   elseif bricks[i].t == "z" or bricks[i].t == "zz" then
+   elseif _b.t == "z" or bricks[i].t == "zz" then
     brickcol = 8
    end
-   rectfill(bricks[i].x,bricks[i].y,bricks[i].x+brick_w,bricks[i].y+brick_h,brickcol)
+   local _bx = _b.x+_b.ox
+   local _by = _b.y+_b.oy
+   rectfill(_bx,_by,_bx+brick_w,_by+brick_h,brickcol)
   end
  end
 
