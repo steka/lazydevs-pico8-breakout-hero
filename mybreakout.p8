@@ -1,47 +1,37 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
-poo=1 --this is the x coordinate
-poospeed=1
-
-pee=40
-peespeed=1
-
+ball_x=1
+ball_y=33
+ball_dx=2
+ball_dy=2
+ball_r=2
+ball_dr=0.5
+frame=0
 col=0
 
-butt="♥"
-
-awsome=true
-
 function _init()
+ cls()
 end
 
 function _update()
- poo=poo+poospeed
- pee=pee+peespeed
+ frame=frame+1
+ ball_x=ball_x+ball_dx
+ ball_y=ball_y+ball_dy
 
- col=col+1
-
- --this is where we check
- --if the heart hits the edges
- if poo>122 then
-  poospeed=-1
+ if ball_x > 127 or ball_x < 0 then
+  ball_dx = -ball_dx
+  sfx(0)
  end
- if poo<0 then
-  poospeed=1
+ if ball_y > 127 or ball_y < 0 then
+  ball_dy = -ball_dy
+  sfx(0)
  end
- if pee>122 then
-  peespeed=-1
- end
- if pee<0 then
-  peespeed=1
- end
-
 end
 
 function _draw()
- cls()
- print(butt,poo,pee,col)
+ rectfill(0,0,127,127,1)
+ circfill(ball_x,ball_y,ball_r,10)
 end
 
 __gfx__
@@ -51,3 +41,5 @@ __gfx__
 00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+000100001836018360183501833018320183100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
