@@ -2,18 +2,23 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
--- 8. high score
+-- 8. to main menu from gover
 -- 9. ui
 --    - powerup messages
 --    - powerup percentage bar
--- 10. better collision
--- 11. gameplay tweaks
+-- 10. gameplay tweaks
 --     - smaller paddle
--- 12  level design
--- 13. sound
---     - level over fanare\
+-- 11  level design
+-- 12  logo
+-- 13  sprites
+
+-- good to have
+
+-- 12. sound
+--     - level over fanare
 --     - start screen music
---     - high score music
+--     - game won fanfare
+-- 13. better collision
 
 function _init()
  cartdata("layzdevs_hero1")
@@ -29,7 +34,7 @@ function _init()
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  levels[1] = "////x4b/s9s"
  --levels[1] = "b9bh9h"
- --levels[2] = "b9bb9bb9bb9bb9bp9p"
+ levels[2] = "b9bb9bb9bb9bb9bp9p"
 
  shake=0
 
@@ -66,12 +71,17 @@ function _init()
  hs1={}
  hs2={}
  hs3={}
+ hsb={true,false,false,false,false}
  --reseths()
  loadhs()
  hschars={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}
  hs_x=128
  hs_dx=128
  loghs=false
+ --typing in intitals
+ nitials={1,1,1}
+ nit_sel=1
+ nit_conf=false
 end
 
 function startgame()
@@ -307,6 +317,7 @@ function gameover()
  mode="gameoverwait"
  govercountdown=60
  blinkspeed=16
+ resethsb()
 end
 
 function levelover()
@@ -324,8 +335,11 @@ function wingame()
  --enough for high score
  if points>hs[5] then
   loghs=true
+  nit_sel=1
+  nit_conf=false
  else
-  loghs=true
+  loghs=false
+  resethsb()
  end
 end
 
@@ -959,16 +973,88 @@ function update_winnerwait()
  govercountdown-=1
  if govercountdown<=0 then
   govercountdown= -1
+  blinkspeed=4
   mode="winner"
  end
 end
 
 function update_winner()
  if govercountdown<0 then
-  if btnp(4) then
-   govercountdown=80
-   blinkspeed=1
-   sfx(15)
+  if loghs then
+   if btnp(0) then
+    sfx(17)
+    if nit_conf then
+     nit_conf=false
+     sfx(19)
+    end
+    nit_conf=false
+    nit_sel-=1
+    if nit_sel<1 then
+     nit_sel = 3
+    end
+   end
+   if btnp(1) then
+    sfx(17)
+    if nit_conf then
+     nit_conf=false
+     sfx(19)
+    end
+    nit_conf=false
+    nit_sel+=1
+    if nit_sel>3 then
+     nit_sel = 1
+    end
+   end
+   if btnp(2) then
+    sfx(16)
+    if nit_conf then
+     nit_conf=false
+     sfx(19)
+    end
+    nit_conf=false
+    nitials[nit_sel]-=1
+    if nitials[nit_sel]<1 then
+     nitials[nit_sel]=#hschars
+    end
+   end
+   if btnp(3) then
+    sfx(16)
+    if nit_conf then
+     nit_conf=false
+     sfx(19)
+    end
+    nitials[nit_sel]+=1
+    if nitials[nit_sel]>#hschars then
+     nitials[nit_sel]=1
+    end
+   end
+   if btnp(4) then
+    if nit_conf then
+     --confirm initials
+     --add a new high score
+     addhs(points,nitials[1],nitials[2],nitials[3])
+     savehs()
+     govercountdown=80
+     blinkspeed=1
+     sfx(15)
+    else
+     nit_conf=true
+     sfx(18)
+    end
+   end
+   if btnp(5) then
+    if nit_conf then
+     nit_conf=false
+     sfx(19)
+    end
+   end
+
+  else
+   if btnp(4) then
+    govercountdown=80
+    blinkspeed=1
+    sfx(15)
+   end
   end
  else
   govercountdown-=1
@@ -987,6 +1073,9 @@ function update_start()
  --slide the high score list
  if hs_x~=hs_dx then
   hs_x+=(hs_dx-hs_x)/5
+  if abs(hs_dx-hs_x)<0.3 then
+   hs_x=hs_dx
+  end
  end
 
  if startcountdown<0 then
@@ -1004,10 +1093,16 @@ function update_start()
    sfx(12)
   end
   if btnp(0) then
-   hs_dx=0
+   if hs_dx~=0 then
+    hs_dx=0
+    sfx(20)
+   end
   end
   if btnp(1) then
-   hs_dx=128
+   if hs_dx~=128 then
+    hs_dx=128
+    sfx(20)
+   end
   end
  else
   startcountdown-=1
@@ -1339,10 +1434,21 @@ function draw_winner()
   print("you have beaten the game",15,_y+14,7)
   print("enter your initials",15,_y+20,7)
   print("for the high score list.",15,_y+26,7)
-  print("aaa",59,_y+34,blink_w)
+  local _colors = {7,7,7}
+  if nit_conf then
+    _colors = {blink_b,blink_b,blink_b}
+  else
+   _colors[nit_sel] = blink_b
+  end
+  print(hschars[nitials[1]],59,_y+34,_colors[1])
+  print(hschars[nitials[2]],63,_y+34,_colors[2])
+  print(hschars[nitials[3]],67,_y+34,_colors[3])
 
-  print("use ⬅️➡️❎🅾️",38,_y+42,6)
-
+  if nit_conf then
+   print("press ❎ to confirm",27,_y+42,blink_b)
+  else
+   print("use ⬅️➡️⬆️⬇️❎",35,_y+42,6)
+  end
  else
   --won but no highscore
   local _y=40
@@ -1362,7 +1468,9 @@ function draw_start()
  print("pico hero breakout",30+(hs_x-128),40,7)
  prinths(hs_x)
  print("press ❎ to start",32,80,blink_g)
- print("press ⬅️ for high score list",9,97,3)
+ if hs_x==128 then
+  print("press ⬅️ for high score list",9,97,3)
+ end
 end
 
 function draw_gameover()
@@ -1467,7 +1575,18 @@ function addhs(_score,_c1,_c2,_c3)
  add(hs1,_c1)
  add(hs2,_c2)
  add(hs3,_c3)
+ for i=1,#hsb do
+  hsb[i]=false
+ end
+ add(hsb,true)
  sorths()
+end
+
+function resethsb()
+ for i=1,#hsb do
+  hsb[i]=false
+ end
+ hsb[1]=true
 end
 
 --sort high score list
@@ -1479,6 +1598,7 @@ function sorths()
    hs1[j],hs1[j-1]=hs1[j-1],hs1[j]
    hs2[j],hs2[j-1]=hs2[j-1],hs2[j]
    hs3[j],hs3[j-1]=hs3[j-1],hs3[j]
+   hsb[j],hsb[j-1]=hsb[j-1],hsb[j]
    j = j - 1
   end
  end
@@ -1487,10 +1607,12 @@ end
 --resets the high score list
 function reseths()
  --create default values
- hs={10,300,400,200,1000}
+ hs={100,1,1,1,1}
  hs1={1,1,8,1,1}
  hs2={1,6,1,1,14}
  hs3={10,1,1,12,1}
+ hsb={true,false,false,false,false}
+
  sorths()
  savehs()
 end
@@ -1541,7 +1663,7 @@ function prinths(_x)
   print(i.." - ",_x+30,14+7*i,5)
   --name
   local _c=7
-  if i==1 then
+  if hsb[i] then
    _c=blink_w
   end
   local _name = hschars[hs1[i]]
@@ -1588,4 +1710,9 @@ __sfx__
 0005000028050280502f0302f03027020270202f0202f02028010280102f0102f01028010280152f0102f01028010280102e0002e000280002800000000000000000000000000000000000000000000000000000
 010400003d6302d630206301c6301562013615106240f6150e6140d6150d614000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010300003f6732d673396711f6511465112651116510f6530f6420f6320b6320a6320a63209632096320762203622036120361203612036120361503614036150361401615016140161501613000000000000000
-000300002805128051310303103036030390301f0301f0302803128031310303103036030390301f0101f01028010280103101031010360103901010010100102801028010310103101036010390161001610016
+010300002805128051310303103036030390301f0301f0302803128031310303103036030390301f0101f01028010280103101031010360103901010010100102801028010310103101036010390161001610016
+00030000294202e4201d3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000200000e42012420000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000300002805128051310303103036000390001f0001f0002800028000310003100036000390001f0001f00028000280003100031000360003900010000100002800028000310003100036000390001000010000
+000200003105131051280302803036000390001f0001f0002800028000310003100036000390001f0001f00028000280003100031000360003900010000100002800028000310003100036000390001000010000
+000100000c6100f6101061013610186101a610216102a6103e6203d6203c6203b62030620206201d61018610156100e6100b61009610066100461000000000000000000000000000000000000000000000000000
