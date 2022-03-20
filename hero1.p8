@@ -2,7 +2,6 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
---- 8 to main menu from gover
 --- 9 ui
 ------ powerup messages
 ------ powerup percentage bar
@@ -58,7 +57,7 @@ function _init()
 
  startcountdown=-1
  govercountdown=-1
-
+ goverrestart=false
  arrm=1
  arrm2=1
  arrmframe=0
@@ -85,6 +84,14 @@ function _init()
  nitials={1,1,1}
  nit_sel=1
  nit_conf=false
+ --sash
+ sash_w=0
+ sash_dw=0
+ sash_c=8
+ sash_text="ohai"
+ sash_frames=0
+ sash_v=false
+
 end
 
 function startgame()
@@ -108,7 +115,7 @@ function startgame()
  buildbricks(level)
  --brick_y=20
 
- lives=3
+ lives=2
  points=0
  sticky = false
 
@@ -141,6 +148,7 @@ function nextlevel()
  chain=1
  sticky = false
 
+ showsash("stage "..levelnum,0)
  serveball()
 end
 
@@ -565,6 +573,15 @@ end
 -->8
 -- juicy stuff --
 
+function showsash(_t,_c)
+ sash_w=0
+ sash_dw=9
+ sash_c=_c
+ sash_text=_t
+ sash_frames=0
+ sash_v=true
+end
+
 function doshake()
  -- -16 +16
  local shakex=16-rnd(32)
@@ -957,6 +974,7 @@ function _update60()
  doblink()
  doshake()
  updateparts()
+ update_sash()
  if mode=="game" then
   update_game()
  elseif mode=="start" then
@@ -973,6 +991,24 @@ function _update60()
   update_winner()
  elseif mode=="winnerwait" then
   update_winnerwait()
+ end
+end
+
+function update_sash()
+ if sash_v then
+  sash_frames+=1
+  --animate width
+  sash_w+=(sash_dw-sash_w)/5
+  if abs(sash_dw-sash_w)<0.3 then
+   sash_w=sash_dw
+  end
+  --make sash go away
+  if sash_frames>60 then
+   sash_dw=0
+  end
+  if sash_frames>90 then
+   sash_v=false
+  end
  end
 end
 
@@ -1128,14 +1164,29 @@ function update_gameover()
    govercountdown=80
    blinkspeed=1
    sfx(12)
+   goverrestart=true
+  end
+  if btnp(5) then
+   govercountdown=80
+   blinkspeed=1
+   sfx(12)
+   goverrestart=false
   end
  else
   govercountdown-=1
   fadeperc=(80-govercountdown)/80
   if govercountdown<=0 then
-   govercountdown= -1
-   blinkspeed=8
-   startgame()
+   if goverrestart then
+    govercountdown= -1
+    blinkspeed=8
+    startgame()
+   else
+    govercountdown= -1
+    blinkspeed=8
+    mode="start"
+    hs_x=128
+    hs_dx=128
+   end
   end
  end
 end
@@ -1394,6 +1445,7 @@ function updateball(bi)
     shake+=0.4
     lives-=1
     if lives<0 then
+     lives=0
      gameover()
     else
      serveball()
@@ -1428,6 +1480,12 @@ function _draw()
  pal()
  if fadeperc ~= 0 then
   fadepal(fadeperc)
+ end
+end
+
+function draw_sash()
+ if sash_v then
+  rectfill(0,64-sash_w,128,64+sash_w,sash_c)
  end
 end
 
@@ -1487,9 +1545,24 @@ function draw_start()
 end
 
 function draw_gameover()
- rectfill(0,60,128,75,0)
+ local _c1, _c2
+ rectfill(0,60,128,81,0)
  print("game over",46,62,7)
- print("press ❎ to restart",27,68,blink_w)
+ if govercountdown<0 then
+  _c1=blink_w
+  _c2=blink_w
+ else
+  if goverrestart then
+   _c1=blink_w
+   _c2=5
+  else
+   _c2=blink_w
+   _c1=5
+  end
+ end
+ print("press ❎ to restart",27,68,_c1)
+ print("press 🅾️ for main menu",20,74,_c2)
+
 end
 
 function draw_levelover()
@@ -1596,6 +1669,8 @@ function draw_game()
   print("score:"..points,40,1,7)
   print("chain:"..chain.."x",100,1,7)
  end
+
+ draw_sash()
 end
 -->8
 --highscore tab
