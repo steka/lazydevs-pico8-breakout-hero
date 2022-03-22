@@ -31,12 +31,12 @@ function _init()
  debug=""
  levelnum = 1
  levels={}
- --levels[1] = "x5b"
+ levels[1] = "x5b"
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  --levels[1] = "/i4//x4b/s9s"
  --levels[1] = "b9bh9h"
- levels[1] = "b9bb9bb9bb9bh9hp9p"
+ --levels[1] = "b9bb9bb9bb9bh9hp9p"
  --levels[1] = "b9bb9bb9b/i9"
 
  shake=0
@@ -97,6 +97,11 @@ function _init()
  sash_v=false
  sash_delay_w=0
  sash_delay_t=0
+
+ -- particle patterns
+ parttimer=0
+ partrow=0
+ startparts()
 end
 
 function startgame()
@@ -866,6 +871,7 @@ end
 -- type 1 - gravity pixel
 -- type 2 - ball of smoke
 -- type 3 - rotating sprite
+-- type 4 - blue rotating sprite
 
 -- big particle updater
 function updateparts()
@@ -895,7 +901,7 @@ function updateparts()
    end
 
    --rotate
-   if _p.tpe == 3 then
+   if _p.tpe == 3 or _p.tpe == 4 then
     _p.rottimer+=1
     if _p.rottimer>5 then
      _p.rot+=1
@@ -933,23 +939,27 @@ function drawparts()
    pset(_p.x,_p.y,_p.col)
   elseif _p.tpe == 2 then
    circfill(_p.x,_p.y,_p.s,_p.col)
-  elseif _p.tpe == 3 then
+  elseif _p.tpe == 3 or _p.tpe == 4 then
    local _fx,_fy
-   if _p.rot==2 then
-    _fx=false
-    _fy=true
-   elseif _p.rot==3 then
-    _fx=true
-    _fy=true
-   elseif _p.rot==4 then
-    _fx=true
-    _fy=false
-   else
-    _fx=false
-    _fy=false
+   if _p.tpe == 3 then
+    if _p.rot==2 then
+     _fx=false
+     _fy=true
+    elseif _p.rot==3 then
+     _fx=true
+     _fy=true
+    elseif _p.rot==4 then
+     _fx=true
+     _fy=false
+    else
+     _fx=false
+     _fy=false
+    end
+   elseif _p.tpe == 4 then
+    pal(7,1)
    end
-
    spr(_p.col,_p.x,_p.y,1,1,_fx,_fy)
+   pal()
   end
  end
 end
@@ -989,6 +999,45 @@ function animatebricks()
     end
 
    end
+  end
+ end
+end
+
+function startparts()
+ for i=0,300 do
+  spawnbgparts(false,i)
+ end
+end
+
+function spawnbgparts(_top,_t)
+ if _t%30==0 then
+  if partrow==0 then
+   partrow=1
+  else
+   partrow=0
+  end
+  for i=0,8 do
+   if _top then
+    _y=-8
+   else
+    _y=-8+0.4*_t
+   end
+   if (i+partrow)%2==0 then
+    addpart(i*16,_y,0,0.4,0,10000,{1},0)
+   else
+    local _spr = 16 + flr(rnd(14))
+    addpart((i*16)-4,_y-4,0,0.4,4,10000,{_spr},0)
+   end
+  end
+ end
+ if _t%15==0 then
+  if _top then
+   _y=-8
+  else
+   _y=-8+0.8*_t
+  end
+  for i=0,8 do
+   addpart(8+i*16,_y,0,0.8,0,10000,{1},0)
   end
  end
 end
@@ -1147,6 +1196,8 @@ function update_winner()
    govercountdown= -1
    blinkspeed=8
    mode="start"
+   parts={}
+   startparts()
    hs_x=128
    hs_dx=0
   end
@@ -1154,6 +1205,10 @@ function update_winner()
 end
 
 function update_start()
+ -- raining particles
+ parttimer=parttimer+1
+
+ spawnbgparts(true,parttimer)
  --slide the high score list
  if hs_x~=hs_dx then
   hs_x+=(hs_dx-hs_x)/5
@@ -1194,6 +1249,7 @@ function update_start()
   if startcountdown<=0 then
    startcountdown= -1
    blinkspeed=8
+   part={}
    startgame()
   end
  end
@@ -1225,6 +1281,8 @@ function update_gameover()
     govercountdown= -1
     blinkspeed=8
     mode="start"
+    parts={}
+    startparts()
     hs_x=128
     hs_dx=128
    end
@@ -1572,12 +1630,16 @@ end
 
 function draw_start()
  cls()
+
+ -- particles
+ drawparts()
+
  --draw logo
  palt(14,true)
  spr(64,(hs_x-128)+36,10,7,5)
  palt()
- print("by lazy devs",40+(hs_x-128),50,1)
- print("bit.ly/lazydevs",34+(hs_x-128),56,1)
+ print("by lazy devs",40+(hs_x-128),50,2)
+ print("bit.ly/lazydevs",34+(hs_x-128),56,2)
 
  prinths(hs_x)
  print("press ❎ to start",32,80,blink_g)
