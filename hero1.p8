@@ -2,9 +2,6 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
---- 9 ui
------- powerup messages
------- powerup percentage bar
 -- 10 level design
 -- 11 gameplay tweaks
 -------- smaller paddle
@@ -21,6 +18,7 @@ __lua__
 --     - start screen music
 --     - game won fanfare
 -- 13. better collision
+-- ?? powerup percentage bar
 
 function _init()
  cartdata("layzdevs_hero1")
@@ -34,9 +32,10 @@ function _init()
  --levels[1] = "x5b"
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
- levels[1] = "/i4//x4b/s9s"
+ --levels[1] = "/i4//x4b/s9s"
  --levels[1] = "b9bh9h"
- levels[2] = "b9bb9bb9bb9bh9hp9p"
+ -- levels[1] = "b9bb9bb9bb9bh9hp9p"
+ levels[1] = "b9bb9bb9b/i9"
 
  shake=0
 
@@ -87,11 +86,15 @@ function _init()
  --sash
  sash_w=0
  sash_dw=0
+ sash_tx=0
+ sash_tdx=0
  sash_c=8
+ sash_tc=7
  sash_text="ohai"
  sash_frames=0
  sash_v=false
-
+ sash_delay_w=0
+ sash_delay_t=0
 end
 
 function startgame()
@@ -126,6 +129,8 @@ function startgame()
  timer_expand=0
  timer_reduce=0
 
+ showsash("stage "..levelnum,0,7)
+
  serveball()
 end
 
@@ -148,7 +153,7 @@ function nextlevel()
  chain=1
  sticky = false
 
- showsash("stage "..levelnum,0)
+ showsash("stage "..levelnum,0,7)
  serveball()
 end
 
@@ -375,9 +380,11 @@ function powerupget(_p)
  if _p == 1 then
   -- slowdown
   timer_slow = 400
+  showsash("slowdown!",9,4)
  elseif _p == 2 then
   -- life
   lives+=1
+  showsash("extra life!",7,6)
  elseif _p == 3 then
   -- catch
   -- check if there are stuck balls
@@ -390,20 +397,25 @@ function powerupget(_p)
   if hasstuck==false then
    sticky = true
   end
+  showsash("sticky paddle!",11,3)
  elseif _p == 4 then
   -- expand
   timer_expand = 900
   timer_reduce = 0
+  showsash("expand!",12,1)
  elseif _p == 5 then
   -- reduce
   timer_reduce = 900
   timer_expand = 0
+  showsash("reduce!",0,8)
  elseif _p == 6 then
   -- megaball
   timer_mega = 100
+  showsash("megaball!",8,2)
  elseif _p == 7 then
   -- multiball
   multiball()
+  showsash("multiball!",10,9)
  end
 end
 
@@ -419,8 +431,7 @@ function hitbrick(_i,_combo)
   bricks[_i].v=false
   if _combo then
    points+=10*chain*pointsmult
-   chain+=1
-   chain=mid(1,chain,7)
+   boostchain()
   end
  elseif bricks[_i].t=="i" then
   --invincible brick
@@ -433,8 +444,7 @@ function hitbrick(_i,_combo)
    bricks[_i].v=false
    if _combo then
     points+=10*chain*pointsmult
-    chain+=1
-    chain=mid(1,chain,7)
+    boostchain()
    end
   else
    sfx(10)
@@ -453,8 +463,7 @@ function hitbrick(_i,_combo)
   bricks[_i].v=false
   if _combo then
    points+=10*chain*pointsmult
-   chain+=1
-   chain=mid(1,chain,7)
+   boostchain()
   end
   spawnpill(bricks[_i].x,bricks[_i].y)
  elseif bricks[_i].t=="s" then
@@ -464,10 +473,18 @@ function hitbrick(_i,_combo)
   bricks[_i].t="zz"
   if _combo then
    points+=10*chain*pointsmult
-   chain+=1
-   chain=mid(1,chain,7)
+   boostchain()
   end
  end
+end
+
+-- increase chain by one
+function boostchain()
+ if chain==6 then
+  showsash("so sick!!",12,1)
+ end
+ chain+=1
+ chain=mid(1,chain,7)
 end
 
 function spawnpill(_x,_y)
@@ -573,13 +590,19 @@ end
 -->8
 -- juicy stuff --
 
-function showsash(_t,_c)
+function showsash(_t,_c,_tc)
  sash_w=0
- sash_dw=9
+ sash_dw=4
  sash_c=_c
  sash_text=_t
  sash_frames=0
  sash_v=true
+ sash_tx=-#sash_text*4
+ sash_tdx=64-(#sash_text*2)
+ sash_delay_w=0
+ sash_delay_t=5
+ sash_tc=_tc
+
 end
 
 function doshake()
@@ -998,15 +1021,31 @@ function update_sash()
  if sash_v then
   sash_frames+=1
   --animate width
-  sash_w+=(sash_dw-sash_w)/5
-  if abs(sash_dw-sash_w)<0.3 then
-   sash_w=sash_dw
+  if sash_delay_w>0 then
+   sash_delay_w-=1
+  else
+   sash_w+=(sash_dw-sash_w)/5
+   if abs(sash_dw-sash_w)<0.3 then
+    sash_w=sash_dw
+   end
+  end
+  --animate text
+  if sash_delay_t>0 then
+   sash_delay_t-=1
+  else
+   sash_tx+=(sash_tdx-sash_tx)/10
+   if abs(sash_tx-sash_tdx)<0.3 then
+    sash_tx=sash_tdx
+   end
   end
   --make sash go away
-  if sash_frames>60 then
+  if sash_frames==75 then
    sash_dw=0
+   sash_tdx=160
+   sash_delay_w=15
+   sash_delay_t=0
   end
-  if sash_frames>90 then
+  if sash_frames>115 then
    sash_v=false
   end
  end
@@ -1486,6 +1525,7 @@ end
 function draw_sash()
  if sash_v then
   rectfill(0,64-sash_w,128,64+sash_w,sash_c)
+  print(sash_text,sash_tx,62,sash_tc)
  end
 end
 
@@ -1666,8 +1706,8 @@ function draw_game()
   print(debug,1,1,7)
  else
   print("lives:"..lives,1,1,7)
-  print("score:"..points,40,1,7)
-  print("chain:"..chain.."x",100,1,7)
+  print("score:"..points,60,1,7)
+  print(chain.."x",120,1,7)
  end
 
  draw_sash()
