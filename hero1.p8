@@ -4,10 +4,9 @@ __lua__
 -- breakout hero (beta)
 -- by layz devs
 
+-- megeball useless
 -- sash confusing
--- sudden death
 
--- ? megeball useless
 -- ? difficult to redirect the ball
 
 function _init()
@@ -68,11 +67,7 @@ function _init()
  spdwind=0 -- speedline windup
 
  --highscrore
- hs={}
- hst={}
- hs1={}
- hs2={}
- hs3={}
+ hs,hst,hs1,hs2,hs3={},{},{},{},{}
  hsb={true,false,false,false,false}
  --reseths()
  loadhs()
@@ -239,18 +234,18 @@ function resetpills()
 end
 
 function addbrick(_i,_t)
- local _b
- _b = {}
- _b.x=4+((_i-1)%11)*(brick_w+2)
- _b.y=11+flr((_i-1)/11)*(brick_h+2)
- _b.v=true
- _b.t=_t
- _b.fsh=0
- _b.ox=0
- _b.oy=-(128+rnd(128))
- _b.dx=0
- _b.dy=rnd(64)
- _b.hp=1
+ local _b = {
+   x=4+((_i-1)%11)*(brick_w+2),
+   y=11+flr((_i-1)/11)*(brick_h+2),
+   v=true,
+   t=_t,
+   fsh=0,
+   ox=0,
+   oy=-(128+rnd(128)),
+   dx=0,
+   dy=rnd(64),
+   hp=1,
+ }
  -- strength of hardened blocks
  if _t=="h" then
   _b.hp=2
@@ -270,14 +265,15 @@ end
 function serveball()
  ball={}
  ball[1] = newball()
+ local mb=ball[1]
+ mb.x=pad_x
+ mb.y=pad_y-ball_r
+ mb.dx=1
+ mb.dy=-1
+ mb.ang=1
+ mb.stuck=true
 
- ball[1].x=pad_x
- ball[1].y=pad_y-ball_r
- ball[1].dx=1
- ball[1].dy=-1
- ball[1].ang=1
- ball[1].stuck=true
-
+ sd_brick=nil
  pointsmult=1
  chain=1
  timer_mega=0
@@ -292,32 +288,31 @@ function serveball()
 end
 
 function newball()
- b = {}
- b.x = 0
- b.y = 0
- b.dx = 0
- b.dy = 0
- b.ang = 1
- b.stuck = false
- b.rammed = false
- b.colcount=0
- b.collast=nil
- return b
+ return {
+   x = 0,
+   y = 0,
+   dx = 0,
+   dy = 0,
+   ang = 1,
+   stuck = false,
+   rammed = false,
+   colcount=0,
+   collast=nil
+ }
 end
 
 function copyball(ob)
- b={}
- b.x = ob.x
- b.y = ob.y
- b.dx = ob.dx
- b.dy = ob.dy
- b.ang = ob.ang
- b.stuck = ob.stuck
- b.rammed = ob.rammed
- b.colcount=ob.colcount
- b.collast=ob.collast
-
- return b
+ return {
+   x=ob.x,
+   y=ob.y,
+   dx=ob.dx,
+   dy=ob.dy,
+   ang=ob.ang,
+   stuck=ob.stuck,
+   rammed=ob.rammed,
+   colcount=ob.colcount,
+   collast=ob.collast
+   }
 end
 
 function setang(bl,ang)
@@ -553,16 +548,12 @@ function getpoints(_p)
 end
 
 function spawnpill(_x,_y)
- local _t
- local _pill
-
- _t = flr(rnd(7))+1
-
- _pill={}
- _pill.x = _x
- _pill.y = _y
- _pill.t = _t
- add(pill,_pill)
+ local _t = flr(rnd(7))+1
+ add(pill,{
+  x=_x,
+  y=_y,
+  t=_t
+  })
 end
 
 function checkexplosions()
@@ -625,8 +616,11 @@ function trigger_sd()
  for i=1,#bricks do
   if bricks[i].v == true and bricks[i].t != "i" then
    sd_brick=bricks[i]
-   showsash("sudden death!",5,9)
-   sd_timer=900
+   showsash("sudden death!",2,8)
+   sd_timer=450
+   sd_blinkt=sd_timer/10
+   sd_brick.fsh=4
+   sfx(29)
   end
  end
 end
@@ -637,7 +631,16 @@ function update_sd()
   if sd_timer<1 then
    sd_brick.t="zz"
    sd_brick=nil
+   return
   end
+  sd_blinkt-=1
+
+  if sd_blinkt<1 then
+   sd_brick.fsh=4
+   sd_blinkt=sd_timer/10
+   sfx(29)
+  end
+
  end
 end
 -->8
@@ -660,13 +663,9 @@ end
 
 function doshake()
  -- -16 +16
- local shakex=16-rnd(32)
- local shakey=16-rnd(32)
+ local shakex,shakey=16-rnd(32),16-rnd(32)
 
- shakex=shakex*shake
- shakey=shakey*shake
-
- camera(shakex,shakey)
+ camera(shakex*shake,shakey*shake)
 
  shake=shake*0.95
  if shake<0.05 then
@@ -757,22 +756,21 @@ end
 
 -- add a particle
 function addpart(_x,_y,_dx,_dy,_type,_maxage,_col,_s)
- local _p = {}
- _p.x=_x
- _p.y=_y
- _p.dx=_dx
- _p.dy=_dy
- _p.tpe=_type
- _p.mage=_maxage
- _p.age=0
- _p.col=_col[1]
- _p.colarr=_col
- _p.rot=0
- _p.rottimer=0
- _p.s=_s
- _p.os=_s
-
- add(part,_p)
+ add(part,{
+   x=_x,
+   y=_y,
+   dx=_dx,
+   dy=_dy,
+   tpe=_type,
+   mage=_maxage,
+   age=0,
+   col=_col[1],
+   colarr=_col,
+   rot=0,
+   rottimer=0,
+   s=_s,
+   os=_s
+ })
 end
 
 -- spawn a small puft
@@ -2119,6 +2117,7 @@ function updateball(bi)
     shake+=0.15
     del(ball,myball)
    else
+    sd_brick=nil
     shake+=0.4
     lives-=1
     if lives<0 then
@@ -2336,50 +2335,50 @@ end
 function loadlevels()
 
 --01 simple breakout
-levels[1]="///xb8xxb8xxbpbbpbbpbxxb8xxb8x"
+levels={"///xb8xxb8xxbpbbpbbpbxxb8xxb8x"
 
 --02 stairway to heaven
-levels[2]="/b/bb/bbp/b3/b4/b4p/b6/bsb5/b7p/h9s"
+        ,"/b/bb/bbp/b3/b4/b4p/b6/bsb5/b7p/h9s"
 
 --03 invader
-levels[3]="xxsxxxxxs/xxsxxxxxs/xxxsxxxs/xxxbbbbbxxxxxbbbbbbbxxxbbbbbbbbbxxbbpbbbpbbxxbbbbbbbbbxxbbbbbbbbbxxbxbxxxbxbxxbxbxxxbxbxxxxxbxb/"
+        ,"xxsxxxxxs/xxsxxxxxs/xxxsxxxs/xxxbbbbbxxxxxbbbbbbbxxxbbbbbbbbbxxbbpbbbpbbxxbbbbbbbbbxxbbbbbbbbbxxbxbxxxbxbxxbxbxxxbxbxxxxxbxb/"
 
 --04 twin towers
-levels[4]="//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbx"
+        ,"//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbx"
 
 --05 get inside
-levels[5]="pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
+        ,"pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
 
 --08 cups high
-levels[6]="/xixixxxixixxixixxxixixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
+        ,"/xixixxxixixxixixxxixixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
 
 --14 clogged lanes
-levels[7]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
+        ,"//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
 
 --16 enegry core
-levels[8]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibsbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
+        ,"//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibsbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
 
 --11 oreo
-levels[9]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
+        ,"///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
 
 --17 shelves
-levels[10]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
+        ,"//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
 
 --12 border wall
-levels[11]="/bbbsbbbsbbbpxxxxxxxxxpb9b/biiiixiiiibxpxxxpxxxpxhiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
+        ,"/bbbsbbbsbbbpxxxxxxxxxpb9b/biiiixiiiibxpxxxpxxxpxhiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
 
 --10 mellow center
-levels[12]="/ph8pbxxxxxxxxxbbxhhhphhhxbbxhxxxxxhxbbxhxhhhxhxbbxpxhshxpxbbxhxhhhxhxbbxhxxxxxhxbbxhhhhhhhxbpxxxxxxxxxph9h"
+        ,"/ph8pbxxxxxxxxxbbxhhhphhhxbbxhxxxxxhxbbxhxhhhxhxbbxpxhshxpxbbxhxhhhxhxbbxhxxxxxhxbbxhhhhhhhxbpxxxxxxxxxph9h"
 
 --13 lungs
-levels[13]="///bbbpixipbbbhbbiixiibbhbbbsixisbbbbpbsixisbpbihiiixiiihibbbpixipbbbbbbbixibbbb"
+        ,"///bbbpixipbbbhbbiixiibbhbbbsixisbbbbpbsixisbpbihiiixiiihibbbpixipbbbbbbbixibbbb"
 
 --15 diagonal
-levels[14]="///bb/bbbb/bbbbbbb/bsbbbbbbb/pbpbbbbbbbbihbbpbpbbbbxxihbbbbpbbxxxxihibbsbxxxxxxxhibpxxxxxxxxxhi"
+        ,"///bb/bbbb/bbbbbbb/bsbbbbbbb/pbpbbbbbbbbihbbpbpbbbbxxihbbbbpbbxxxxihibbsbxxxxxxxhibpxxxxxxxxxhi"
 
 --18 lazy devs
-levels[15]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
-
+        ,"//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
+}
 end
 __gfx__
 00000000dd6666dddd6666dddd6666dddd6666dddd6666dddd6666dddd6666dd5aa55aa55a776666666677766667777777777777000000000000000000000000
