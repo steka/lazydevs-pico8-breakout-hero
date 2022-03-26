@@ -6,18 +6,24 @@ __lua__
 -------- smaller paddle??
 -------- powerup timers??
 
--- 2 arcade game over
 -- 3 stats
--- 3 keyboard check
+-- difficulty spikes?
+-- is the game too long?
+
+-- how many balls lost?
+-- how many plays
+-- how long to beat a level
+-- best score per level
+
 
 -- testing
 
--- 4 visual stuff
+-- 5 visual stuff
    -- sticky aura
    -- pad speedlines
    -- ball twist
    -- intro
--- 5 copy protection
+-- 6 copy protection
 
 
 -----------------------
@@ -43,6 +49,7 @@ function _init()
  levelnum = 1
  levels={}
  loadlevels()
+ startlives=2
  --levels[1] = "x5b"
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
@@ -128,6 +135,12 @@ function _init()
 end
 
 function startgame()
+ levelnum = 1
+ level=levels[levelnum]
+ restartlevel()
+end
+
+function restartlevel()
  mode="game"
  ball_r=2
  ball_dr=0.5
@@ -143,15 +156,10 @@ function startgame()
  brick_w=9
  brick_h=4
 
- levelnum = 1
- level = levels[levelnum]
  buildbricks(level)
- --brick_y=20
-
- lives=10
+ lives=startlives
  points=0
  sticky = false
-
  chain=1 --combo chain multiplier
 
  timer_mega=0
@@ -160,7 +168,6 @@ function startgame()
  timer_reduce=0
 
  showsash("stage "..levelnum,0,7)
-
  serveball()
 end
 
@@ -174,7 +181,7 @@ function nextlevel()
  if levelnum > #levels then
   --error. game about to load
   --a level that doesnt exist
-  mode="start"
+  wingame()
   return
  end
  level=levels[levelnum]
@@ -182,6 +189,10 @@ function nextlevel()
 
  chain=1
  sticky = false
+ timer_mega=0
+ timer_slow=0
+ timer_expand=0
+ timer_reduce=0
 
  showsash("stage "..levelnum,0,7)
  serveball()
@@ -1193,7 +1204,7 @@ function update_winner()
      nitials[nit_sel]=1
     end
    end
-   if btnp(4) then
+   if btnp(5) then
     if nit_conf then
      --confirm initials
      --add a new high score
@@ -1207,7 +1218,7 @@ function update_winner()
      sfx(18)
     end
    end
-   if btnp(5) then
+   if btnp(4) then
     if nit_conf then
      nit_conf=false
      sfx(19)
@@ -1258,7 +1269,7 @@ function update_start()
    end
   end
 
-  if btnp(4) then
+  if btnp(5) then
    startcountdown=80
    blinkspeed=1
    sfx(12)
@@ -1299,13 +1310,13 @@ function update_gameover()
  addpart(flr(rnd(128)),_btnrow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
 
  if govercountdown<0 then
-  if btnp(4) then
+  if btnp(5) then
    govercountdown=80
    blinkspeed=1
    sfx(12)
    goverrestart=true
   end
-  if btnp(5) then
+  if btnp(4) then
    govercountdown=80
    blinkspeed=1
    sfx(12)
@@ -1319,7 +1330,7 @@ function update_gameover()
     govercountdown= -1
     blinkspeed=8
     part={}
-    startgame()
+    restartlevel()
    else
     govercountdown= -1
     blinkspeed=8
@@ -1423,10 +1434,10 @@ function update_game()
   --pad_x+=5
   pointstuck(1)
  end
- if btnp(4) then
+ if btnp(5) then
   releasestuck()
  end
- if btnp(5) then
+ if btnp(4) then
   nextlevel()
  end
 
@@ -1439,6 +1450,8 @@ function update_game()
  -- big ball loop
  for bi=#ball,1,-1 do
   updateball(bi)
+ end
+ for bi=#ball,1,-1 do
   --check if paddle rammed ball
   padramcheck(ball[bi])
  end
@@ -1606,9 +1619,8 @@ function draw_gameover()
    _c1=5
   end
  end
- print("press ❎ to restart",27,68,_c1)
+ print("press ❎ to retry level",20,68,_c1)
  print("press 🅾️ for main menu",20,74,_c2)
-
 end
 
 function draw_levelover()
@@ -2175,58 +2187,58 @@ levels[1]="///b9bb9bbbpbbpbbpbbb9bb9b"
 levels[2]="/b/bb/bbp/b3/b4/b4p/b6/bsb5/b7p/h9s"
 
 --03 invader
-levels[16]="xxsxxxxxs/xxsxxxxxs/xxxsxxxs/xxxbbbbbxxxxxbbbbbbbxxxbbbbbbbbbxxbbpbbbpbbxxbbbbbbbbbxxbbbbbbbbbxxbxbxxxbxbxxbxbxxxbxbxxxxxbxb/"
+levels[3]="xxsxxxxxs/xxsxxxxxs/xxxsxxxs/xxxbbbbbxxxxxbbbbbbbxxxbbbbbbbbbxxbbpbbbpbbxxbbbbbbbbbxxbbbbbbbbbxxbxbxxxbxbxxbxbxxxbxbxxxxxbxb/"
 
 --04 twin towers
-levels[3]="//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbx"
+levels[4]="//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbx"
 
 --05 get inside
-levels[4]="pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
+levels[5]="pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
 
 --11 three burgers
-levels[5]="///b9bpbbpbbbpbbp/bbhxhbhxhbbbbhxhbhxhbbbbhxhbhxhbb/pbbpbbbpbbpb9b"
+levels[6]="///b9bpbbpbbbpbbp/bbhxhbhxhbbbbhxhbhxhbbbbhxhbhxhbb/pbbpbbbpbbpb9b"
 
 --07 arrow
-levels[6]="/xxxxxh/xxxbbxbb/xbbxxhxxbbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbpxxhxxpbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbbxxxxxbbxbxxxxxxxxxb"
+levels[7]="/xxxxxh/xxxbbxbb/xbbxxhxxbbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbpxxhxxpbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbbxxxxxbbxbxxxxxxxxxb"
 
 --08 cups high
-levels[7]="/xixixxxixixxibixxxibixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
+levels[8]="/xixixxxixixxibixxxibixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
 
 --09 maze
-levels[8]="i9ix3ix4ixipxixxxxxixixxixxixxixixxipxixxixixpixxixxixixxixxixxixixxixpixxixipxxxxixxixixxxxxixsixi9"
+levels[9]="i9ix3ix4ixipxixxxxxixixxixxixxixixxipxixxixixpixxixxixixxixxixxixixxixpixxixipxxxxixxixixxxxxixsixi9"
 
 --10 mellow center
-levels[9]="/ph8phx8hhxhhhphhhxhhxhxxxxxhxhhxhxhhhxhxhhxpxhshxpxhhxhxhhhxhxhhxhxxxxxhxhhxh6xhpx8ph9h"
+levels[10]="/ph8phx8hhxhhhphhhxhhxhxxxxxhxhhxhxhhhxhxhhxpxhshxpxhhxhxhhhxhxhhxhxxxxxhxhhxh6xhpx8ph9h"
 
 --06 oreo
-levels[10]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
+levels[11]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
 
 --12 border wall
-levels[11]="/bbbsbbbsbbbpxxxxxxxxxpb9b/hiiiiiiiiihpxxxxpxxxxphiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
+levels[12]="/bbbsbbbsbbbpxxxxxxxxxpb9b/hiiiiiiiiihpxxxxpxxxxphiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
 
 --13 lungs
-levels[12]="///bbbpixipbbbiibiixiiibibbbpixipbbbbbbbixibbbbihiiixiiihibbbpixipbbbbbbbixibbbb"
+levels[13]="///bbbpixipbbbiibiixiiibibbbpixipbbbbbbbixibbbbihiiixiiihibbbpixipbbbbbbbixibbbb"
 
 --14 clogged lanes
-levels[13]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
+levels[14]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
 
 --15 diagonal
-levels[14]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxihibbbpxxxxxxxhibbxxxxxxxxxhi"
+levels[15]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxihibbbpxxxxxxxhibbxxxxxxxxxhi"
 
 --16 enegry core
-levels[15]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibbbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
+levels[16]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibbbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
 
 --17 shelves
-levels[16]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
+levels[17]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
 
 --18 lazy devs
-levels[17]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
+levels[18]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
 
 --19 cells
-levels[18]="/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii"
+levels[19]="/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii"
 
 --20 hedgehog
-levels[19]="/xiixixixiixxixxxxxxxixxxxixxxi/xxxxxp/ixixihixixixxxxxb/xixixbxixixxxxxxb/xiixihixiixxixxxpxxxixxxxixxxi/xxixixixi"
+levels[20]="/xiixixixiixxixxxxxxxixxxxixxxi/xxxxxp/ixixihixixixxxxxb/xixixbxixixxxxxxb/xiixihixiixxixxxpxxxixxxxixxxi/xxixixixi"
 
 end
 __gfx__
