@@ -4,26 +4,34 @@ __lua__
 -- breakout hero (beta)
 -- by layz devs
 
--- 1 visual stuff
-   -- dev logo
--- 2 playesting issues
-   -- ball gets stuck between paddle and wall
-   -- fix ramming
-   -- add ball save
-   -- fix levels
-   -- track time
--- 3 copy protection
+-- score overflow 32367.99
+-- sash confusing
+-- frame rate
+-- feels slow (fast mode)
+
+-- ? megeball useless
+-- ? lame slowdown
+-- ? level ballancing
+-- ? level feedback
+     -- ball bouncing forever
+     -- difficult to reach bricks
+     -- unfair bricks close to pad
+-- ? difficult to redirect the ball
 
 function _init()
+ pirate=false
+ if (stat(102)!="www.lexaloffle.com" and stat(102)!=0) pirate=true
+
  initstats()
  cartdata("layzdevs_hero1")
  cls()
- screenbox={left=127,
-            right=0,
+ screenbox={left=126,
+            right=1,
             top=140,
             bottom=7}
 
- mode="start"
+ mode="logo"
+ lcnt=0
  level=""
  debug=""
  levelnum = 1
@@ -108,7 +116,15 @@ function _init()
        "so sick!",
        "yeeee boiii!",
        "impressive!",
-       "i can't even..."
+       "i can't even...",
+       "it's lit!",
+       "mah dude!",
+       "c-c-combo!",
+       "winning!",
+       "niiiice!",
+       "woah!",
+       "seriously now?",
+       "maximum pwnage!"
       }
 
  -- music
@@ -122,6 +138,7 @@ function startgame()
 end
 
 function restartlevel()
+ stimerreset()
  mode="game"
  ball_r=2
  ball_dr=0.5
@@ -129,8 +146,8 @@ function restartlevel()
  pad_x=64
  pad_y=120
  pad_dx=0
- pad_wo=24--original pad width
- pad_w=24 --current pad with
+ pad_wo=24
+ pad_w=24
  pad_h=6
  pad_c=7
 
@@ -141,7 +158,7 @@ function restartlevel()
  lives=startlives
  points=0
  sticky = false
- chain=1 --combo chain multiplier
+ chain=1
 
  timer_mega=0
  timer_slow=0
@@ -153,6 +170,7 @@ function restartlevel()
 end
 
 function nextlevel()
+ stimerreset()
  mode="game"
  pad_x=52
  pad_y=120
@@ -160,8 +178,6 @@ function nextlevel()
 
  levelnum+=1
  if levelnum > #levels then
-  --error. game about to load
-  --a level that doesnt exist
   wingame()
   return
  end
@@ -281,8 +297,6 @@ function serveball()
 
  sticky_x=0
  sticky=false
- --0.50
- --1.30
 end
 
 function newball()
@@ -294,6 +308,8 @@ function newball()
  b.ang = 1
  b.stuck = false
  b.rammed = false
+ b.colcount=0
+ b.collast=nil
  return b
 end
 
@@ -306,6 +322,9 @@ function copyball(ob)
  b.ang = ob.ang
  b.stuck = ob.stuck
  b.rammed = ob.rammed
+ b.colcount=ob.colcount
+ b.collast=ob.collast
+
  return b
 end
 
@@ -328,24 +347,19 @@ function multiball()
  local ogball = ball[ballnum]
 
  ball2 = copyball(ogball)
- --ball3 = copyball(ball[1])
 
  if ogball.ang==0 then
   setang(ball2,2)
-  --setang(ball3,2)
+
  elseif ogball.ang==1 then
   setang(ogball,0)
   setang(ball2,2)
-  --ball[1].ang==1
-  --setang(ball3,2)
  else
   setang(ball2,0)
-  --setang(ball3,1)
  end
 
  ball2.stuck=false
  ball[#ball+1]=ball2
- --ball[#ball+1]=ball3
 end
 
 function sign(n)
@@ -367,6 +381,7 @@ function gameover()
 end
 
 function levelover()
+ addstat2()
  music(6)
  mode="leveloverwait"
  govercountdown=60
@@ -374,13 +389,13 @@ function levelover()
 end
 
 function wingame()
+ addstat2()
  music(8)
  mode="winnerwait"
  govercountdown=60
  blinkspeed=16
 
- --find out if pluer is good
- --enough for high score
+ --enough for high score?
  if points>hs[5] then
   loghs=true
   nit_sel=1
@@ -432,17 +447,17 @@ function powerupget(_p)
   showsash("sticky paddle!",11,3)
  elseif _p == 4 then
   -- expand
-  timer_expand = 900
+  timer_expand = 600
   timer_reduce = 0
   showsash("expand!",12,1)
  elseif _p == 5 then
   -- reduce
-  timer_reduce = 900
+  timer_reduce = 600
   timer_expand = 0
   showsash("reduce!",0,8)
  elseif _p == 6 then
   -- megaball
-  timer_mega = 100
+  timer_mega = 120
   showsash("megaball!",8,2)
  elseif _p == 7 then
   -- multiball
@@ -543,12 +558,6 @@ function spawnpill(_x,_y)
  local _pill
 
  _t = flr(rnd(7))+1
- --_t = flr(rnd(2))
- --if _t== 0 then
- -- _t = 7
- --else
- -- _t = 3
- --end
 
  _pill={}
  _pill.x = _x
@@ -836,7 +845,7 @@ function spawnspeedline(_x,_y)
   local _ox = rnd() * 2.5
   local _oy = rnd() * pad_h
 
-  addpart(_x+_ox,_y+_oy,pad_dx/4,0,6,10+rnd(15),{13},2+rnd(4))
+  addpart(_x+_ox,_y+_oy,pad_dx,0,6,10+rnd(15),{13},2+rnd(4))
  end
 end
 
@@ -992,7 +1001,11 @@ function drawparts()
    spr(_p.col,_p.x,_p.y,1,1,_fx,_fy)
    pal()
   elseif _p.tpe == 6 then
-   line(_p.x-_p.s/2.,_p.y,_p.x+_p.s/2,_p.y,_p.col)
+   if _p.dx<0 then
+    line(_p.x,_p.y,_p.x+_p.s,_p.y,_p.col)
+   else
+    line(_p.x-_p.s,_p.y,_p.x,_p.y,_p.col)
+   end
   end
  end
 end
@@ -1078,12 +1091,15 @@ end
 -- update functions
 
 function _update60()
+ stimertick()
  doblink()
  doshake()
  updateparts()
  update_sash()
  if mode=="game" then
   update_game()
+ elseif mode=="logo" then
+  update_logo()
  elseif mode=="start" then
   update_start()
  elseif mode=="gameover" then
@@ -1131,6 +1147,18 @@ function update_sash()
   end
   if sash_frames>115 then
    sash_v=false
+  end
+ end
+end
+
+function update_logo()
+ lcnt+=1
+ if lcnt<100 then
+  fadeto(0)
+ else
+  fadeto(1)
+  if fadeperc==1 then
+   mode="start"
   end
  end
 end
@@ -1235,35 +1263,31 @@ function update_start()
 
  if startcountdown<0 then
   -- fade in game
-  if fadeperc~=0 then
-   fadeperc-=0.05
-   if fadeperc<0 then
-    fadeperc=0
+  fadeto(0)
+  if not(pirate) then
+   if btnp(5) then
+    startcountdown=80
+    blinkspeed=1
+    sfx(12)
+    music(-1,2000)
    end
-  end
-
-  if btnp(5) then
-   startcountdown=80
-   blinkspeed=1
-   sfx(12)
-   music(-1,2000)
-  end
-  if btnp(0) then
-   if hs_dx==128 then
-    hs_dx=0
-    sfx(20)
-   elseif hs_dx==0 then
-    hs_dx=-128
-    sfx(20)
+   if btnp(0) then
+    if hs_dx==128 then
+     hs_dx=0
+     sfx(20)
+    elseif hs_dx==0 then
+     hs_dx=-128
+     sfx(20)
+    end
    end
-  end
-  if btnp(1) then
-   if hs_dx==0 then
-    hs_dx=128
-    sfx(20)
-   elseif hs_dx==-128 then
-    hs_dx=0
-    sfx(20)
+   if btnp(1) then
+    if hs_dx==0 then
+     hs_dx=128
+     sfx(20)
+    elseif hs_dx==-128 then
+     hs_dx=0
+     sfx(20)
+    end
    end
   end
  else
@@ -1370,17 +1394,22 @@ function update_levelover()
  end
 end
 
+function fadeto(_f)
+ -- fade in game
+ if fadeperc!=_f then
+  if abs(fadeperc-_f)<0.05 then
+   fadeperc=_f
+  else
+   fadeperc=fadeperc+(0.05*sgn(_f-fadeperc))
+  end
+ end
+end
+
 function update_game()
  local buttpress=false
  local nextx,nexty,brickhit
 
- -- fade in game
- if fadeperc~=0 then
-  fadeperc-=0.05
-  if fadeperc<0 then
-   fadeperc=0
-  end
- end
+ fadeto(0)
 
  --infinite loop protection
  if timer_slow > 0 then
@@ -1405,22 +1434,20 @@ function update_game()
   --left
   pad_dx=-2.5
   buttpress=true
-  --pad_x-=5
   pointstuck(-1)
  end
  if btn(1) then
   --right
   pad_dx=2.5
   buttpress=true
-  --pad_x+=5
   pointstuck(1)
  end
  if btnp(5) then
   releasestuck()
  end
- if btnp(4) then
-  nextlevel()
- end
+ --if btnp(4) then
+ -- nextlevel()
+ --end
 
  if not(buttpress) then
   pad_dx=pad_dx/1.3
@@ -1474,7 +1501,6 @@ function update_game()
  checkexplosions()
 
  if levelfinished() then
-  addstat2()
   _draw()
   if levelnum >= #levels then
    wingame()
@@ -1507,6 +1533,8 @@ end
 function _draw()
  if mode=="game" then
   draw_game()
+ elseif mode=="logo" then
+  draw_logo()
  elseif mode=="start" then
   draw_start()
  elseif mode=="gameoverwait" then
@@ -1527,6 +1555,12 @@ function _draw()
  if fadeperc ~= 0 then
   fadepal(fadeperc)
  end
+end
+
+function draw_logo()
+ cls(12)
+ --rect(0,0,128,128,12)
+ sspr(56,32,50,50,39,39)
 end
 
 function draw_sash()
@@ -1587,16 +1621,23 @@ function draw_start()
  palt(14,true)
  spr(64,(hs_x-128)+36,10,7,5)
  palt()
- print("by lazy devs",40+(hs_x-128),50,2)
- print("bit.ly/lazydevs",34+(hs_x-128),56,2)
+ print("game dev tutorial at",25+(hs_x-128),50,2)
+ print("youtube.com/lazydevs",25+(hs_x-128),56,2)
+
+ print("music by grubermusic",25+(hs_x-128),64,2)
+ print("patreon.com/gruber99",25+(hs_x-128),70,2)
 
  prinths(hs_x)
  printstats(hs_x+128)
- if hs_x>0 then
-  print("press ❎ to start",32,80,blink_g)
+ if hs_x>=0 and not(pirate) then
+  print("press ❎ to start",30,92,blink_g)
   if hs_x==128 then
-   print("press ⬅️ for high score list",9,97,3)
+   print("press ⬅️ for high score list",9,109,3)
   end
+ end
+ if pirate then
+  print(stat(102),9,109,1)
+
  end
 end
 
@@ -1791,10 +1832,10 @@ end
 --resets the high score list
 function reseths()
  --create default values
- hs={25,20,15,10,5}
- hs1={1,1,8,1,1}
- hs2={1,6,1,1,14}
- hs3={10,1,1,12,1}
+ hs={3000,2000,1000,500,250}
+ hs1={11,11,11,11,11}
+ hs2={18,18,18,18,18}
+ hs3={19,19,19,19,19}
  hsb={true,false,false,false,false}
 
  sorths()
@@ -2024,14 +2065,22 @@ function updateball(bi)
    else
     shake+=0.4
     lives-=1
+    addstat1()
     if lives<0 then
      lives=0
      gameover()
     else
-     addstat1()
      serveball()
     end
    end
+  end
+
+  -- check if ball is stuck
+  if myball.colcount > 60 then
+   spawndeath(myball.x,myball.y)
+   releasestuck()
+   del(ball,myball)
+   serveball()
   end
 
  end -- end of sticky if
@@ -2041,18 +2090,13 @@ function collide(_b,_c)
  --set postion
  _b.x=_c.x
  _b.y=_c.y
-
- --reflect
- if _c.d=="left" or _c.d=="right" then
-  _b.dx=-_b.dx
- else
-  _b.dy=-_b.dy
- end
+ _b.colcount+=1
 
  if _c.t=="wall" then
   ----------------
   --wall collision
   ----------------
+  reflect(_b,_c.d)
   --puft and sound
   checkinf(_b)
   spawnpuft(_b.x,_b.y)
@@ -2061,29 +2105,57 @@ function collide(_b,_c)
   ----------------
   --pad collision
   ----------------
+  local bend,angf=false,false
   chain=1
   infcounter=0
-  _b.rammed=false
-  --change angle
-  if abs(pad_dx)>2 and _c.d=="top" then
-   if sign(pad_dx)==sign(_b.dx) then
-    --flatten angle
-    setang(_b,mid(0,_b.ang-1,2))
+  --hit side. save?
+  if _c.d=="left" or _c.d=="right" then
+   if _b.y+ball_r>pad_y+3 then
+    -- lost ball
+    _b.rammed=true
    else
-    --raise angle
-    if _b.ang==2 then
-     _b.dx=-_b.dx
-    else
-     setang(_b,mid(0,_b.ang+1,2))
-    end
+    bend=true
+    angf=false
+    _c.d="top"
+    _b.y=pad_y-ball_r
    end
   end
-  --catch powerup
-  if sticky and _c.d=="top" then
-   releasestuck()
-   sticky = false
-   _b.stuck = true
-   sticky_x = _b.x-pad_x
+  reflect(_b,_c.d)
+
+  --change angle
+  if _c.d=="top" then
+   --change angle
+   if bend==false and abs(pad_dx)>1 then
+    bend=true
+    if sign(pad_dx)==sign(_b.dx) then
+     angf=true
+    else
+     angf=false
+    end
+   end
+   if bend then
+    if angf then
+     --flatten angle
+     setang(_b,mid(0,_b.ang-1,2))
+    else
+     --raise angle
+     if _b.ang==2 then
+      _b.dx=-_b.dx
+     else
+      setang(_b,mid(0,_b.ang+1,2))
+     end
+    end
+   end
+   --reset pos
+   _b.y=pad_y-ball_r-1
+
+   --catch powerup
+   if sticky then
+    releasestuck()
+    sticky = false
+    _b.stuck = true
+    sticky_x = _b.x-pad_x
+   end
   end
   --puft and sound
   sfx(1)
@@ -2092,6 +2164,14 @@ function collide(_b,_c)
   ----------------
   --brick collision
   ----------------
+  if _b.collast==nil then
+   _b.collast=_c.brick
+  else
+   if _b.collast!=_c.brick then
+    _b.colcount=0
+   end
+  end
+  reflect(_b,_c.d)
   checkinf(_b)
   hitbrick(_c.brick,true)
   if _c.brick.t=="i" then
@@ -2099,6 +2179,15 @@ function collide(_b,_c)
   end
  end
 
+end
+
+function reflect(_b,_d)
+ --reflect ball
+ if _d=="left" or _d=="right" then
+  _b.dx=-_b.dx
+ else
+  _b.dy=-_b.dy
+ end
 end
 
 function checkinf(_b)
@@ -2153,40 +2242,45 @@ function padramcheck(_b)
             ball_r*2,
             ball_r*2
            ) then
-  --debug="rammed!"
   if _b.dy<0 then
    -- ball flying up.
-   -- better not touch
    return
   end
-  -- change speed of the ball
-  if sign(_b.dx)==sign(pad_dx) then
-   _b.dx+=(pad_dx*2)
+  if _b.y+ball_r>pad_y+3 then
+   -- change speed of the ball
+   if sign(_b.dx)==sign(pad_dx) then
+    _b.dx+=pad_dx
+   else
+    _b.dx=-_b.dx
+    _b.dx+=pad_dx
+   end
+   -- reset ball postion
+   if _b.x<pad_x then
+    _b.x=_pbox.left-ball_r
+   else
+    _b.x=_pbox.right+ball_r
+   end
+   -- puft and sound
+   if _b.rammed~=true then
+    sfx(1)
+    spawnpuft(_b.x,_b.y)
+    _b.rammed=true
+   end
   else
-   _b.dx=-_b.dx
-   _b.dx+=(pad_dx*2)
-  end
-  -- reset ball postion
-  if _b.x<pad_x then
-   _b.x=_pbox.left-ball_r
-  else
-   _b.x=_pbox.right+ball_r
-  end
-  -- puft and sound
-  if _b.rammed~=true then
-   sfx(1)
-   spawnpuft(_b.x,_b.y)
-   _b.rammed=true
+   local _c={}
+   _c.d="top"
+   _c.t="pad"
+   _c.x=_b.x
+   _c.y=_b.y
+   collide(_b,_c)
   end
  end
 end
 -->8
---levels
-
 function loadlevels()
 
 --01 simple breakout
-levels[1]="///b"
+levels[1]="///xb8xxb8xxbpbbpbbpbxxb8xxb8x"
 
 --02 stairway to heaven
 levels[2]="/b/bb/bbp/b3/b4/b4p/b6/bsb5/b7p/h9s"
@@ -2200,50 +2294,35 @@ levels[4]="//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxx
 --05 get inside
 levels[5]="pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
 
---11 three burgers
-levels[6]="///b9bpbbpbbbpbbp/bbhxhbhxhbbbbhxhbhxhbbbbhxhbhxhbb/pbbpbbbpbbpb9b"
-
---07 arrow
-levels[7]="/xxxxxh/xxxbbxbb/xbbxxhxxbbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbpxxhxxpbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbbxxxxxbbxbxxxxxxxxxb"
-
 --08 cups high
-levels[8]="/xixixxxixixxibixxxibixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
-
---09 maze
-levels[9]="i9ix3ix4ixipxixxxxxixixxixxixxixixxipxixxixixpixxixxixixxixxixxixixxixpixxixipxxxxixxixixxxxxixsixi9"
-
---10 mellow center
-levels[10]="/ph8phx8hhxhhhphhhxhhxhxxxxxhxhhxhxhhhxhxhhxpxhshxpxhhxhxhhhxhxhhxhxxxxxhxhhxh6xhpx8ph9h"
-
---06 oreo
-levels[11]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
-
---12 border wall
-levels[12]="/bbbsbbbsbbbpxxxxxxxxxpb9b/hiiiiiiiiihpxxxxpxxxxphiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
-
---13 lungs
-levels[13]="///bbbpixipbbbiibiixiiibibbbpixipbbbbbbbixibbbbihiiixiiihibbbpixipbbbbbbbixibbbb"
+levels[6]="/xixixxxixixxibixxxibixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
 
 --14 clogged lanes
-levels[14]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
-
---15 diagonal
-levels[15]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxihibbbpxxxxxxxhibbxxxxxxxxxhi"
+levels[7]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
 
 --16 enegry core
-levels[16]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibbbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
+levels[8]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibbbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
+
+--11 oreo
+levels[9]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
 
 --17 shelves
-levels[17]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
+levels[10]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
+
+--12 border wall
+levels[11]="/bbbsbbbsbbbpxxxxxxxxxpb9b/biiiiiiiiibxpxxxpxxxpxhiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
+
+--10 mellow center
+levels[12]="/ph8phx8hhxhhhphhhxhhxhxxxxxhxhhxhxhhhxhxhhxpxhshxpxhhxhxhhhxhxhhxhxxxxxhxhhxh6xhpx8ph9h"
+
+--13 lungs
+levels[13]="///bbbpixipbbbibbiixiibbibbbbixibbbbbpbbixibbpbihiiixiiihibbbpixipbbbbbbbixibbbb"
+
+--15 diagonal
+levels[14]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxihibbbpxxxxxxxhibbxxxxxxxxxhi"
 
 --18 lazy devs
-levels[18]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
-
---19 cells
-levels[19]="/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii"
-
---20 hedgehog
-levels[20]="/xiixixixiixxixxxxxxxixxxxixxxi/xxxxxp/ixixihixixixxxxxb/xixixbxixixxxxxxb/xiixihixiixxixxxpxxxixxxxixxxi/xxixixixi"
+levels[15]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
 
 end
 -->8
@@ -2252,10 +2331,25 @@ end
 function initstats()
  stat1={}
  stat2={}
- for i=1,20 do
+ sectimer=0
+ secs=0
+ for i=1,15 do
   stat1[i]=0 -- number lives lost
   stat2[i]=0 -- number of wins
  end
+end
+
+function stimertick()
+ sectimer+=1
+ if sectimer>60 then
+  sectimer-=60
+  secs+=1
+ end
+end
+
+function stimerreset()
+ sectimer=0
+ secs=0
 end
 
 function addstat1()
@@ -2264,8 +2358,9 @@ function addstat1()
 end
 
 function addstat2()
- stat2[levelnum]+=1
+ stat2[levelnum]=secs
  savestats()
+ stimerreset()
 end
 
 function loadstats()
@@ -2273,7 +2368,7 @@ function loadstats()
 
  if dget(21)==45183 then
   _slot+=1
-  for i=1,20 do
+  for i=1,15 do
    stat1[i]=dget(_slot)
    stat2[i]=dget(_slot+1)
    _slot+=2
@@ -2288,7 +2383,7 @@ function savestats()
  dset(_slot,45183)
 
  _slot+=1
- for i=1,20 do
+ for i=1,15 do
   dset(_slot,stat1[i])
   dset(_slot+1,stat2[i])
   _slot+=2
@@ -2296,7 +2391,7 @@ function savestats()
 end
 
 function printstats(_x)
- for i=1,20 do
+ for i=1,15 do
   print(i..".",5+_x,i*6,5)
   print(""..stat1[i],43+_x,i*6,6)
   print(""..stat2[i],83+_x,i*6,7)
@@ -2335,46 +2430,179 @@ bd666d666d666db10000000000000000000000000000000000000000000000000000000000000000
 bd666d666d666db10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1bdddbdddbdddb110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11bbb1bbb1bbb1110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeee7eeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeee7eeeeeeeeeeeeeeeeeee7eeeeeeaa7aaa9ae000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeeeaa7aaa9ae000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeeaaaaa99ae000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeee767eeeeeeeeeeeeeeeeeeee7eaaaa999ae000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeee777eeeeeeeeeeeeeeeeeee7eea9999aee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeee7777eeeeeeeeeeeeeeeeee77eeaaaaeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeee777eeeee7eeeeeeeeeee777eeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeee767eeeee7e7ee7ee7e77777777eeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeee777eeeeeeeeeeeeee7777777eeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeee767ee7eeee7e77ee777777eeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeee7eee777eee77eee77ee77777eeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeee767ee777eeeee77777eeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeee7ee777ee777eeee7777eeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee767ee77e7ee777eee7eeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeee77e7eeee767eeeeee777eee77eeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeee77eeee7ee767e77ee77ee7e77eeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeee77eeeeeeeeeeee77e77ee7eeeeeeeee7eee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeee7ee7e777eeee7777eeee777eeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeee77eeeeeeeeeee777eeee77777eee777ee7ee77e000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeee777777eeeeee77777777777eeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-11111ee11111ee111111ee111ee1111111ee111ee111e11111111111000000000000000000000000000000000000000000000000000000000000000000000000
-177771e177771e177771e17771e1771771e17771e177177117777771000000000000000000000000000000000000000000000000000000000000000000000000
-1ddddd11ddddd11dddd11ddddd11dd1dd11ddddd11dd1dd11dddddd1000000000000000000000000000000000000000000000000000000000000000000000000
-1dd1dd11dd1dd11dd1111dd1dd11dd1dd11dd1dd11dd1dd1111dd111000000000000000000000000000000000000000000000000000000000000000000000000
-166661e166666116661e1666661166661e16616611661661ee1661ee000000000000000000000000000000000000000000000000000000000000000000000000
-1666661166661e16661e1666661166661e16616611661661ee1661ee000000000000000000000000000000000000000000000000000000000000000000000000
-1771771177177117711e1771771177177117717711771771ee1771ee000000000000000000000000000000000000000000000000000000000000000000000000
-177777117717711777711771771177177117222222227221e22271ee000000000000000000000000000000000000000000000000000000000000000000000000
-177771e177177117777117717711771771e1282828882882288821ee000000000000000000000000000000000000000000000000000000000000000000000000
-11111ee1111111111111111e111111e111ee282828222828282821ee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee288882882888282282eee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeee2e2e22e22222e28282882282828282eeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee28282888282828882eeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeee2e2e22e222222222222222e222e222eeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaeeecccccccccccccccccc777cccc777777777cccccccccccccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeee7eeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaeecccccccccccccccccc7777ccc77777777c777ccccccccccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeee7eeeeeeeeeeeeeeeeeee7eeeeeeaa7aaa9aeccccccccc77cccccc77777cccc777777cc777cc7777ccccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeeeaa7aaa9aeccccc7cc777cccccc77777ccccccc777ccc77777777c7ccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeeaaaaa99aecccc77cc777cccccc777777ccccc777cccc7777777cc77cccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeee767eeeeeeeeeeeeeeeeeeee7eaaaa999aeccc777cc777ccccc777c777cccc7777ccccc77777ccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeee777eeeeeeeeeeeeeeeeeee7eea9999aeeccc777cc777ccccc777c777cccc777ccccccc777cccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeee7777eeeeeeeeeeeeeeeeee77eeaaaaeeeccc777cc777cccc777777777cc777cccccccc777cccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeee777eeeee7eeeeeeeeeee777eeeeeeeeccc777cc777cccc777777777cc7777777cccc777cccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeee767eeeee7e7ee7ee7e77777777eeeeccc777cc777777c777ccc777c77777777cccc777cccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeee777eeeeeeeeeeeeee7777777eeeeeccc777cc777777c77ccccc77c77777777cccc777cccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeee767ee7eeee7e77ee777777eeeeeeccc777cc7777cccccccccccccccccccccccccc7ccccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeee7eee777eee77eee77ee77777eeeeeeeccc777cccccccccccccccccccccccccccccccccccccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeee767ee777eeeee77777eeeeeeeeccc777cccc7777cccc777777c777cccc777cc7777ccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeee7ee777ee777eeee7777eeeeeeeeeccc777cc77777777cc777777c777ccc7777c777777cc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee767ee77e7ee777eee7eeeeeeccc777cc777777777c777ccccc777cc777c777777ccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeee77e7eeee767eeeeee777eee77eeeeeeccc777cc777cc7777c777ccccc777cc777c777cccccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeee77eeee7ee767e77ee77ee7e77eeeeeeccc777cc777ccc777c777777cc777c777cc77777cccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeee77eeeeeeeeeeee77e77ee7eeeeeeeee7eeecccc77ccc777cc777c777777ccc777777ccc77777ccc777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeee7ee7e777eeee7777eeee777eeeeeeeecccc777cc777cc777c777cccccc77777cccccc7777cc77cccc0000000000000000000000
+eeeeeeeeeeeeeeeee77eeeeeeeeeee777eeee77777eee777ee7ee77ecccc777cc777c7777c777cccccc77777ccc7ccc777c777cccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeee777777eeeeee77777777777eeeeeeeeeeecccc777cc7777777cc777777cccc777ccc77777777c777cccc0000000000000000000000
+11111ee11111ee111111ee111ee1111111ee111ee111e11111111111cccc777cc777777ccc777777cccc777cccc777777cc777cccc0000000000000000000000
+177771e177771e177771e17771e1771771e17771e177177117777771cccc777ccc77cccccccccccccccccccccccc7777ccc777cccc0000000000000000000000
+1ddddd11ddddd11dddd11ddddd11dd1dd11ddddd11dd1dd11dddddd1cccccccccccccccccccccccc7777cccccccccccccccccccccc0000000000000000000000
+1dd1dd11dd1dd11dd1111dd1dd11dd1dd11dd1dd11dd1dd1111dd111cccc777777777777777777777777777777777777777777cccc0000000000000000000000
+166661e166666116661e1666661166661e16616611661661ee1661ee777777777777777777777777777777777777777777777777770000000000000000000000
+1666661166661e16661e1666661166661e16616611661661ee1661ee7777777777777ccc77ccc77ccc77cccc7c777c7777777777770000000000000000000000
+1771771177177117711e1771771177177117717711771771ee1771eec777777ccc77c77777c7c77c77c7c7777cc7cc7c777c77777c0000000000000000000000
+177777117717711777711771771177177117222222227221e22271eec77777cc7cc7c7777c777c7c77c7cccc7c7c7c7cc7cc77777c0000000000000000000000
+177771e177177117777117717711771771e1282828882882288821eecc7777c777c7c7777c777c7c77c7c7777c777c77ccc77777cc0000000000000000000000
+11111ee1111111111111111e111111e111ee282828222828282821eecc7777ccccc7c7777ccccc7c77c7c7777c777c777c777777cc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee288882882888282282eeeccc777c777c77ccc7c777c7ccc77cccc7c777c777c77777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeee2e2e22e22222e28282882282828282eeeecccc7777777777777777777777777777777777777777777ccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee28282888282828882eeeecccc777777777777777777777777777777777777777777cccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeee2e2e22e222222222222222e222e222eeeeeccccc7777777777cccccccccccccccccccc7777777777ccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecccccccccccccccccccccccccccccccccccccccccccccccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeccccccccccccccc77777ccccccccccc7777ccccccccccccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecccccccccccccccc77777cccccccc77777cccccccccccccccc0000000000000000000000
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeccccccccccccccccc7777777cc7777777ccccccccccccccccc0000000000000000000000
+00000000000000000000000000000000000000000000000000000000ccccccccccccccccccc777777777777ccccccccccccccccccc0000000000000000000000
+00000000000000000000000000000000000000000000000000000000ccccccccccccccccccccc77777777ccccccccccccccccccccc0000000000000000000000
+00000000000000000000000000000000000000000000000000000000cccccccccccccccccccccccc77cccccccccccccccccccccccc0000000000000000000000
+__label__
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07000777070707770077000007070000000000000000000000000000000007700770077077707770000077700000000000000000000000000000007700707000
+07000070070707000700007007070000000000000000000000000000000070007000707070707000070070700000000000000000000000000000000700707000
+07000070070707700777000007770000000000000000000000000000000077707000707077007700000070700000000000000000000000000000000700070000
+07000070077707000007007000070000000000000000000000000000000000707000707070707000070070700000000000000000000000000000000700707000
+07770777007007770770000000070000000000000000000000000000000077000770770070707770000077700000000000000000000000000000007770707000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111115aa55aa55a111111111111111111111111111111111111111111111111111111115aa55aa55a11111111111111111111111111
+11111111111111111111111111990099009911111111111111111111111111111111111111111111111111111111990099009911111111111111111111111111
+11111111111111111111111111900990099011111111111111111111111111111111111111111111111111111111900990099011111111111111111111111111
+11111111111111111111111111009900990011111111111111111111111111111111111111111111111111111111009900990011111111111111111111111111
+11111111111111111111111111044004400411111111111111111111111111111111111111111111111111111111044004400411111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111115aa55aa55a111111111111111111111111111111111111111111111111111111115aa55aa55a11111111111111111111111111
+11111111111111111111111111990099009911111111111111111111111111111111111111111111111111111111990099009911111111111111111111111111
+11111111111111111111111111900990099011111111111111111111111111111111111111111111111111111111900990099011111111111111111111111111
+11111111111111111111111111009900990011111111111111111111111111111111111111111111111111111111009900990011111111111111111111111111
+11111111111111111111111111044004400411111111111111111111111111111111111111111111111111111111044004400411111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111115aa55aa55a11111111111111111111111111111111115aa55aa55a1111111111111111111111111111111111111
+11111111111111111111111111111111111119900990099111111111111111111111111111111111199009900991111111111111111111111111111111111111
+11111111111111111111111111111111111119009900990111111111111111111111111111111111190099009901111111111111111111111111111111111111
+11111111111111111111111111111111111110099009900111111111111111111111111111111111100990099001111111111111111111111111111111111111
+11111111111111111111111111111111111110440044004111111111111111111111111111111111104400440041111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+1111111111111111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1111111111111111111111111111111111111
+1111111111111111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1111111111111111111111111111111111111
+1111111111111111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1111111111111111111111111111111111111
+1111111111111111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1111111111111111111111111111111111111
+1111111111111111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee11111111111111111111111111
+11111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee11111111111111111111111111
+11111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee11111111111111111111111111
+11111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee11111111111111111111111111
+11111111111111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee11111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee177766667771eeeeeeeeee1eeeeeeeeee1eeeeeeeeee177766667771eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1ccddddddcc1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1ccddddddcc1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1ccddccddcc1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1ccddccddcc1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1ccddddddcc1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1ccddddddcc1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1ddd5555ddd1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1ddd5555ddd1eeeeeeeeee1eeeeeeeeee111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee1eeeeeeeeee111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+111111111111111eeeeeeeeee111111111111eeeeeeeeee1111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111111111eeeeeeeeee111111111111eeeeeeeeee111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+1111111111111111111111111111111111111111111111111111111a111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111111111111a1111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+1111111111111111111111111111111111111111111aaa1111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111a7aaa111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111aaa9a111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111111111111a999a111111111111111111111111111111111111111111111111111111111111111111111111111111111
+1111111111111111111111111111111111111111111aaa1111111111111111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111ddd1ddddddddddddddd1ddd111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111d666d666666666666666d666d11111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111d676d777777777777777d676d11111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111d666d666666666666666d666d11111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111d666d666666666666666d666d11111111111111111111111111111111111111111111111111111111111111111111111
+111111111111111111111111111111111ddd1ddddddddddddddd1ddd111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+
 __sfx__
 01010000183601836018350183301832018310013002130021300213002130021300213001d7001c7001c7001b7001b7001b7001c7001d7001d7001d7001e7001e70000000000000000000000000000000000000
 010100002436024360243502433024320243100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2405,7 +2633,7 @@ __sfx__
 011800000313503045031350f04503135030450f1350304503135030451071114711177111a7111d711207110313503045031350f04503135030450f1350f0450313503045217111f7111b71113711227112f711
 0118000000002000022a0422a0322a0222a0022a0422c0422c0322c022250422503225002250422704127032270222e0422e0322c0422c032270462c042330322c0222c022270472c04225042250322704127035
 01180000000022c0422c0322c0222c012000002c0422e0422e0322e0222703225002270422a0412a0322a02231042310322e0422e0322e0002a0462c0422a0422e0422e0322a0473104233042330323604236035
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000a00003705000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0118000025315273152c3152e3162a3152c315273152e30525315273172c3152a3152c31527310273152e30525315273172c3152e3162a3152c314273152e30525315273112c3152e31536317384153321033215
 01180000081350804508135140450813508045141350804508135080451071114711177111a7111d711207110a1350a0450a135160450a1350a04516135160450a1350a045217111f7111b71113711227112f711
 0109000011015130251603518045000000f0051301515025180351a045020050200515015170251a0351c0451f055230552605528050280402803228022280122801500005000050000500005000050000500005
