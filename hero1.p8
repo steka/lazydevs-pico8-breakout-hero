@@ -2,14 +2,15 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
--- 14 particle deco
--------- textboxes ?
-
 -- 10 level design
 -- 11 gameplay tweaks
 -------- smaller paddle
 -------- powerup timers
 -------- reduce gives points
+-- 12 lost ball
+-- 13 sticky aura
+-- 14 infinite ball protection
+-- 15 randomized sick
 
 -----------------------
 --- good to have    ---
@@ -18,25 +19,28 @@ __lua__
 --     - level over fanare
 --     - start screen music
 --     - game won fanfare
--- 13. better collision
 -- ?? powerup percentage bar
 
 function _init()
  cartdata("layzdevs_hero1")
  cls()
+ screenbox={left=127,
+            right=0,
+            top=140,
+            bottom=7}
 
  mode="start"
  level=""
  debug=""
  levelnum = 1
  levels={}
- levels[1] = "x5b"
+ --levels[1] = "x5b"
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
  --levels[1] = "/i4//x4b/s9s"
  --levels[1] = "b9bh9h"
- --levels[1] = "b9bb9bb9bb9bh9hp9p"
- levels[2] = "b9bb9bb9b/i9"
+ levels[1] = "b9bb9bb9bb9bh9hp9p"
+ --levels[1] = "b9bb9bb9b/i9"
 
  shake=0
 
@@ -108,7 +112,7 @@ function startgame()
  ball_r=2
  ball_dr=0.5
 
- pad_x=52
+ pad_x=64
  pad_y=120
  pad_dx=0
  pad_wo=24--original pad width
@@ -215,7 +219,7 @@ function addbrick(_i,_t)
  local _b
  _b = {}
  _b.x=4+((_i-1)%11)*(brick_w+2)
- _b.y=20+flr((_i-1)/11)*(brick_h+2)
+ _b.y=11+flr((_i-1)/11)*(brick_h+2)
  _b.v=true
  _b.t=_t
  _b.fsh=0
@@ -242,7 +246,7 @@ function serveball()
  ball={}
  ball[1] = newball()
 
- ball[1].x=pad_x+flr(pad_w/2)
+ ball[1].x=pad_x
  ball[1].y=pad_y-ball_r
  ball[1].dx=1
  ball[1].dy=-1
@@ -258,7 +262,7 @@ function serveball()
 
  resetpills()
 
- sticky_x=flr(pad_w/2)
+ sticky_x=0
 
  --0.50
  --1.30
@@ -425,58 +429,58 @@ function powerupget(_p)
  end
 end
 
-function hitbrick(_i,_combo)
+function hitbrick(_b,_combo)
  local fshtime=10
 
- if bricks[_i].t=="b" then
+ if _b.t=="b" then
   -- regular brick
   sfx(2+chain)
   --spawn particles
-  shatterbrick(bricks[_i],lasthitx,lasthity)
-  bricks[_i].fsh=fshtime
-  bricks[_i].v=false
+  shatterbrick(_b,lasthitx,lasthity)
+  _b.fsh=fshtime
+  _b.v=false
   if _combo then
    points+=10*chain*pointsmult
    boostchain()
   end
- elseif bricks[_i].t=="i" then
+ elseif _b.t=="i" then
   --invincible brick
   sfx(10)
- elseif bricks[_i].t=="h" then
+ elseif _b.t=="h" then
   -- hardened brick
   if timer_mega > 0 then
    sfx(2+chain)
-   bricks[_i].fsh=fshtime
-   bricks[_i].v=false
+   _b.fsh=fshtime
+   _b.v=false
    if _combo then
     points+=10*chain*pointsmult
     boostchain()
    end
   else
    sfx(10)
-   bricks[_i].t="b"
-   bricks[_i].fsh=fshtime
+   _b.t="b"
+   _b.fsh=fshtime
    --bump the brick
-   bricks[_i].dx = lasthitx*0.25
-   bricks[_i].dy = lasthity*0.25
+   _b.dx = lasthitx*0.25
+   _b.dy = lasthity*0.25
   end
- elseif bricks[_i].t=="p" then
+ elseif _b.t=="p" then
   -- powerup brick
   sfx(2+chain)
   --spawn particles
-  shatterbrick(bricks[_i],lasthitx,lasthity)
-  bricks[_i].fsh=fshtime
-  bricks[_i].v=false
+  shatterbrick(_b,lasthitx,lasthity)
+  _b.fsh=fshtime
+  _b.v=false
   if _combo then
    points+=10*chain*pointsmult
    boostchain()
   end
-  spawnpill(bricks[_i].x,bricks[_i].y)
- elseif bricks[_i].t=="s" then
+  spawnpill(_b.x,_b.y)
+ elseif _b.t=="s" then
   -- sposion brick
   sfx(2+chain)
-  shatterbrick(bricks[_i],lasthitx,lasthity)
-  bricks[_i].t="zz"
+  shatterbrick(_b,lasthitx,lasthity)
+  _b.t="zz"
   if _combo then
    points+=10*chain*pointsmult
    boostchain()
@@ -545,18 +549,9 @@ function explodebrick(_i)
   and abs(bricks[j].x-bricks[_i].x) <= (brick_w+2)
   and abs(bricks[j].y-bricks[_i].y) <= (brick_h+2)
   then
-   hitbrick(j,false)
+   hitbrick(bricks[j],false)
   end
  end
-end
-
-function ball_box(bx,by,box_x,box_y,box_w,box_h)
- -- checks for a collion of the ball with a rectangle
- if by-ball_r > box_y+box_h then return false end
- if by+ball_r < box_y then return false end
- if bx-ball_r > box_x+box_w then return false end
- if bx+ball_r < box_x then return false end
- return true
 end
 
 function box_box(box1_x,box1_y,box1_w,box1_h,box2_x,box2_y,box2_w,box2_h)
@@ -568,31 +563,6 @@ function box_box(box1_x,box1_y,box1_w,box1_h,box2_x,box2_y,box2_w,box2_h)
  return true
 end
 
-function deflx_ball_box(bx,by,bdx,bdy,tx,ty,tw,th)
- local slp = bdy / bdx
- local cx, cy
- if bdx == 0 then
-  return false
- elseif bdy == 0 then
-  return true
- elseif slp > 0 and bdx > 0 then
-  cx = tx - bx
-  cy = ty - by
-  return cx > 0 and cy/cx < slp
- elseif slp < 0 and bdx > 0 then
-  cx = tx - bx
-  cy = ty + th - by
-  return cx > 0 and cy/cx >= slp
- elseif slp > 0 and bdx < 0 then
-  cx = tx + tw - bx
-  cy = ty + th - by
-  return cx < 0 and cy/cx <= slp
- else
-  cx = tx + tw - bx
-  cy = ty - by
-  return cx < 0 and cy/cx >= slp
- end
-end
 -->8
 -- juicy stuff --
 
@@ -1410,7 +1380,7 @@ function update_game()
   pad_dx=pad_dx/1.3
  end
  pad_x+=pad_dx
- pad_x=mid(0,pad_x,127-pad_w)
+ pad_x=mid(pad_w/2,pad_x,127-(pad_w/2))
 
  -- big ball loop
  for bi=#ball,1,-1 do
@@ -1424,7 +1394,7 @@ function update_game()
   if pill[i].y > 128 then
    -- remove pill
    del(pill,pill[i])
-  elseif box_box(pill[i].x,pill[i].y,8,6,pad_x,pad_y,pad_w,pad_h) then
+  elseif box_box(pill[i].x,pill[i].y,8,6,pad_x-(pad_w/2),pad_y,pad_w,pad_h) then
    powerupget(pill[i].t)
    spawnpillpuft(pill[i].x,pill[i].y,pill[i].t)
    -- remove pill
@@ -1461,137 +1431,6 @@ function update_game()
  --animate bricks
  animatebricks()
 
-end
-
-function updateball(bi)
- myball = ball[bi]
- if myball.stuck then
-  --ball_x=pad_x+flr(pad_w/2)
-  myball.x=pad_x+sticky_x
-  myball.y=pad_y-ball_r-1
- else
-  --regular ball physics
-  if timer_slow > 0 then
-   nextx=myball.x+(myball.dx/2)
-   nexty=myball.y+(myball.dy/2)
-  else
-   nextx=myball.x+myball.dx
-   nexty=myball.y+myball.dy
-  end
-
-  --check if ball hit wall
-  if nextx > 124 or nextx < 3 then
-   nextx=mid(0,nextx,127)
-   myball.dx = -myball.dx
-   sfx(0)
-   spawnpuft(nextx,nexty)
-  end
-  if nexty < 10 then
-   nexty=mid(0,nexty,127)
-   myball.dy = -myball.dy
-   sfx(0)
-   spawnpuft(nextx,nexty)
-  end
-
-  -- check if ball hit pad
-  if ball_box(nextx,nexty,pad_x,pad_y,pad_w,pad_h) then
-   -- deal with collision
-   if deflx_ball_box(myball.x,myball.y,myball.dx,myball.dy,pad_x,pad_y,pad_w,pad_h) then
-    --ball hit paddle on the side
-    myball.dx = -myball.dx
-    if myball.x < pad_x+pad_w/2 then
-     nextx=pad_x-ball_r
-    else
-     nextx=pad_x+pad_w+ball_r
-    end
-   else
-    --ball hit paddle on the top/bottom
-    myball.dy = -myball.dy
-    if myball.y > pad_y then
-     --bottom
-     nexty=pad_y+pad_h+ball_r
-    else
-     --top
-     nexty=pad_y-ball_r
-     if abs(pad_dx)>2 then
-      --change angle
-      if sign(pad_dx)==sign(myball.dx) then
-       --flatten angle
-       setang(myball,mid(0,myball.ang-1,2))
-      else
-       --raise angle
-       if myball.ang==2 then
-        myball.dx=-myball.dx
-       else
-        setang(myball,mid(0,myball.ang+1,2))
-       end
-      end
-     end
-    end
-   end
-   sfx(1)
-   chain=1
-   spawnpuft(nextx,nexty)
-
-   --catch powerup
-   if sticky and myball.dy < 0 then
-    releasestuck()
-    sticky = false
-    myball.stuck = true
-    sticky_x = myball.x-pad_x
-   end
-  end
-
-  brickhit=false
-  for i=1,#bricks do
-   -- check if ball hit brick
-   if bricks[i].v and ball_box(nextx,nexty,bricks[i].x,bricks[i].y,brick_w,brick_h) then
-    -- deal with collision
-    if not(brickhit) then
-     if (timer_mega > 0 and bricks[i].t=="i")
-     or timer_mega <= 0 then
-      lasthitx=myball.dx
-      lasthity=myball.dy
-      if deflx_ball_box(myball.x,myball.y,myball.dx,myball.dy,bricks[i].x,bricks[i].y,brick_w,brick_h) then
-       myball.dx = -myball.dx
-      else
-       myball.dy = -myball.dy
-      end
-     end
-    end
-    brickhit=true
-    hitbrick(i,true)
-   end
-  end
-  myball.x=nextx
-  myball.y=nexty
-
-  --trail particles
-  if timer_mega > 0 then
-   spawnmtrail(nextx,nexty)
-  else
-   spawntrail(nextx,nexty)
-  end
-  -- check if ball left screen
-  if nexty > 127 then
-   sfx(2)
-   spawndeath(myball.x,myball.y)
-   if #ball > 1 then
-    shake+=0.15
-    del(ball,myball)
-   else
-    shake+=0.4
-    lives-=1
-    if lives<0 then
-     lives=0
-     gameover()
-    else
-     serveball()
-    end
-   end
-  end
-
- end -- end of sticky if
 end
 -->8
 -- draw functions
@@ -1809,11 +1648,12 @@ function draw_game()
  end
 
  --pad
+ local _px=pad_x-(pad_w/2)
  palt(1,true)
- sspr(0,16,5,6,pad_x,pad_y)
- sspr(8,16,5,6,pad_x+pad_w-4,pad_y)
+ sspr(0,16,5,6,_px,pad_y)
+ sspr(8,16,5,6,_px+pad_w-4,pad_y)
  for i=5,pad_w-5 do
-  sspr(5,16,1,6,pad_x+i,pad_y)
+  sspr(5,16,1,6,_px+i,pad_y)
  end
  palt()
 
@@ -1940,6 +1780,265 @@ function prinths(_x)
 
   print(_score,(_x+100)-(#_score*4),14+7*i,_c)
  end
+end
+-->8
+-- nu collision
+function intercept(_x1,_y1,_x2,_y2,_x3,_y3,_x4,_y4,_d)
+ _denom=((_y4-_y3)*(_x2-_x1))-((_x4-_x3)*(_y2-_y1))
+ if _denom != 0 then
+  _ua=(((_x4-_x3)*(_y1-_y3))-((_y4-_y3)*(_x1-_x3)))/_denom
+  if _ua>=0 and _ua<=1 then
+   _ub=(((_x2-_x1)*(_y1-_y3))-((_y2-_y1)*(_x1-_x3)))/_denom
+   if _ub>=0 and _ub<=1 then
+    _x = _x1+(_ua * (_x2-_x1))
+    _y = _y1+(_ua * (_y2-_y1))
+    return {x=_x,y=_y,d=_d}
+   end
+  end
+ end
+ return nil
+end
+
+function ballintercept(_b,_box,_nx,_ny)
+ local _pt=nil
+ if _ny<_b.y then
+  _pt = intercept(_b.x,_b.y,_nx,_ny,
+                  _box.left   - ball_r,
+                  _box.bottom + ball_r,
+                  _box.right  + ball_r,
+                  _box.bottom + ball_r,
+                  "bottom")
+ elseif _ny>_b.y then
+  _pt = intercept(_b.x,_b.y,_nx,_ny,
+                  _box.left   - ball_r,
+                  _box.top    - ball_r,
+                  _box.right  + ball_r,
+                  _box.top    - ball_r,
+                  "top")
+ end
+ if _pt==nil then
+  if _nx<_b.x then
+   _pt = intercept(_b.x,_b.y,_nx,_ny,
+                   _box.right  + ball_r,
+                   _box.top    - ball_r,
+                   _box.right  + ball_r,
+                   _box.bottom + ball_r,
+                   "right")
+  elseif _nx>_b.x then
+   _pt = intercept(_b.x,_b.y,_nx,_ny,
+                   _box.left   - ball_r,
+                   _box.top    - ball_r,
+                   _box.left   - ball_r,
+                   _box.bottom + ball_r,
+                   "left")
+  end
+ end
+ return _pt
+end
+
+function updateball(bi)
+ myball = ball[bi]
+
+ if myball.stuck then
+  myball.x=pad_x+sticky_x
+  myball.y=pad_y-ball_r-1
+ else
+  --regular ball physics
+  if timer_slow > 0 then
+   nextx=myball.x+(myball.dx/2)
+   nexty=myball.y+(myball.dy/2)
+  else
+   nextx=myball.x+myball.dx
+   nexty=myball.y+myball.dy
+  end
+
+  local _cols={}
+  local _mcols={}
+  local _tmpcol=nil
+  local _box
+  --check if ball hit wall
+  _tmpcol=ballintercept(myball,screenbox,nextx,nexty)
+  if _tmpcol~=nil then
+   _tmpcol.t="wall"
+   add(_cols,_tmpcol)
+  end
+
+  --collision with pad
+  _box=getpadbox()
+  _tmpcol=ballintercept(myball,_box,nextx,nexty)
+  if _tmpcol~=nil then
+   _tmpcol.t="pad"
+   add(_cols,_tmpcol)
+  end
+
+  --collision with bricks
+  for i=1,#bricks do
+   -- check if ball hit brick
+   if bricks[i].v then
+    _box=getbrickbox(bricks[i])
+    _tmpcol=ballintercept(myball,_box,nextx,nexty)
+    if _tmpcol~=nil then
+     _tmpcol.t="brick"
+     _tmpcol.brick=bricks[i]
+     if (timer_mega > 0 and bricks[i].t=="i")
+     or timer_mega <= 0 then
+      --megaball????
+      add(_cols,_tmpcol)
+     else
+      add(_mcols,_tmpcol)
+     end
+    end
+   end
+  end
+
+  --save speed before collision
+  lasthitx=myball.dx
+  lasthity=myball.dy
+
+  --see if there is collisions
+  if #_cols==0 then
+   --no collisions
+   myball.x=nextx
+   myball.y=nexty
+  else
+   -- some collision
+   local _coli=1
+   if #_cols>1 then
+    -- more than one collisiom
+    -- find the closest
+    local _coldst=coldist(myball,_cols[1])
+    for i=2,#_cols do
+     local _dst=coldist(myball,_cols[i])
+     if _dst<_coldst then
+      _coldst=_dst
+      _coli=i
+     end
+    end
+   end
+   --deal with the collision
+   collide(myball,_cols[_coli])
+  end
+
+  -- do megaball collisions
+  if #_mcols>0 then
+   for i=1,#_mcols do
+    hitbrick(_mcols[i].brick,true)
+   end
+  end
+
+  --trail particles
+  if timer_mega > 0 then
+   spawnmtrail(myball.x,myball.y)
+  else
+   spawntrail(myball.x,myball.y)
+  end
+
+  -- check if ball left screen
+  if myball.y > 127 then
+   sfx(2)
+   spawndeath(myball.x,myball.y)
+   if #ball > 1 then
+    shake+=0.15
+    del(ball,myball)
+   else
+    shake+=0.4
+    lives-=1
+    if lives<0 then
+     lives=0
+     gameover()
+    else
+     serveball()
+    end
+   end
+  end
+
+ end -- end of sticky if
+end
+
+function collide(_b,_c)
+ --set postion
+ _b.x=_c.x
+ _b.y=_c.y
+
+ --reflect
+ if _c.d=="left" or _c.d=="right" then
+  _b.dx=-_b.dx
+ else
+  _b.dy=-_b.dy
+ end
+
+ if _c.t=="wall" then
+  ----------------
+  --wall collision
+  ----------------
+  --puft and sound
+  spawnpuft(_b.x,_b.y)
+  sfx(0)
+ elseif _c.t=="pad" then
+  ----------------
+  --pad collision
+  ----------------
+  chain=1
+  --change angle
+  if abs(pad_dx)>2 and _c.d=="top" then
+   if sign(pad_dx)==sign(_b.dx) then
+    --flatten angle
+    setang(_b,mid(0,_b.ang-1,2))
+   else
+    --raise angle
+    if _b.ang==2 then
+     _b.dx=-_b.dx
+    else
+     setang(_b,mid(0,_b.ang+1,2))
+    end
+   end
+  end
+  --catch powerup
+  if sticky and _c.d=="top" then
+   releasestuck()
+   sticky = false
+   _b.stuck = true
+   sticky_x = _b.x-pad_x
+  end
+  --puft and sound
+  sfx(1)
+  spawnpuft(_b.x,_b.y)
+ elseif _c.t=="brick" then
+  ----------------
+  --brick collision
+  ----------------
+  hitbrick(_c.brick,true)
+  if _c.brick.t=="i" then
+   spawnpuft(_b.x,_b.y)
+  end
+ end
+
+end
+
+function coldist(_b,_col)
+ return dist(_b.x,_b.y,_col.x,_col.y)
+end
+
+function dist(x1,y1,x2,y2)
+ local dx = x1 - x2
+ local dy = y1 - y2
+ return sqrt(dx*dx+dy*dy)
+end
+
+function getpadbox()
+ local _l=pad_x-(pad_w/2)
+ local _r=pad_x+(pad_w/2)
+ local _t=pad_y
+ local _b=pad_y+pad_h
+ return {left=_l,right=_r,top=_t,bottom=_b}
+end
+
+function getbrickbox(_b)
+ local _l=_b.x
+ local _r=_b.x+brick_w
+ local _t=_b.y
+ local _b=_b.y+brick_h
+ return {left=_l,right=_r,top=_t,bottom=_b}
 end
 __gfx__
 00000000dd6666dddd6666dddd6666dddd6666dddd6666dddd6666dddd6666dd5aa55aa55a776666666677766667777777777777000000000000000000000000
