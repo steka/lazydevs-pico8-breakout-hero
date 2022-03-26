@@ -5,11 +5,10 @@ __lua__
 -- by layz devs
 
 -- sash confusing
--- frame rate
 -- feels slow (fast mode)
+-- sudden death
 
 -- ? megeball useless
--- ? lame slowdown
 -- ? level ballancing
 -- ? level feedback
      -- ball bouncing forever
@@ -36,6 +35,7 @@ function _init()
  levels={}
  loadlevels()
  startlives=4
+ fastmode=false
 
  shake=0
 
@@ -139,6 +139,8 @@ function restartlevel()
  mode="game"
  ball_r=2
  ball_dr=0.5
+ ball_spd=1
+ if (fastmode) ball_spd=1.5
 
  pad_x=64
  pad_y=120
@@ -378,7 +380,6 @@ function gameover()
 end
 
 function levelover()
- addstat2()
  music(6)
  mode="leveloverwait"
  govercountdown=60
@@ -542,6 +543,7 @@ end
 -- get points
 function getpoints(_p)
  --timer_reduce
+ if (fastmode) _p=_p*2
  if timer_reduce<=0 then
   points+=_p*chain*pointsmult
  else
@@ -1271,6 +1273,10 @@ function update_start()
     sfx(12)
     music(-1,2000)
    end
+   if btnp(3) or btnp(2) then
+    fastmode=not fastmode
+    sfx(16)
+   end
    if btnp(0) then
     if hs_dx==128 then
      hs_dx=0
@@ -1623,15 +1629,19 @@ function draw_start()
 
  prinths(hs_x)
  if hs_x>=0 and not(pirate) then
+  if fastmode then
+   print("fast mode",46,84,blink_w)
+  end
+
   print("press ❎ to start",30,92,blink_g)
+  print("press ⬆️⬇️ to toggle fast mode",4,115,3)
   if hs_x==128 then
    print("press ⬅️ for high score list",9,109,3)
   end
  end
- if pirate then
-  print(stat(102),9,109,1)
 
- end
+ if (pirate) print(stat(102),9,109,1)
+
 end
 
 function draw_gameover()
@@ -1988,11 +1998,11 @@ function updateball(bi)
  else
   --regular ball physics
   if timer_slow > 0 then
-   nextx=myball.x+(myball.dx/2)
-   nexty=myball.y+(myball.dy/2)
+   nextx=myball.x+(myball.dx/2*ball_spd)
+   nexty=myball.y+(myball.dy/2*ball_spd)
   else
-   nextx=myball.x+myball.dx
-   nexty=myball.y+myball.dy
+   nextx=myball.x+myball.dx*ball_spd
+   nexty=myball.y+myball.dy*ball_spd
   end
 
   local _cols={}
