@@ -4,7 +4,6 @@ __lua__
 --goals
 -- 14 particle deco
 -------- textboxes ?
--------- main menu bg scroll
 
 -- 10 level design
 -- 11 gameplay tweaks
@@ -37,7 +36,7 @@ function _init()
  --levels[1] = "/i4//x4b/s9s"
  --levels[1] = "b9bh9h"
  --levels[1] = "b9bb9bb9bb9bh9hp9p"
- --levels[1] = "b9bb9bb9b/i9"
+ levels[2] = "b9bb9bb9b/i9"
 
  shake=0
 
@@ -125,7 +124,7 @@ function startgame()
  buildbricks(level)
  --brick_y=20
 
- lives=2
+ lives=0
  points=0
  sticky = false
 
@@ -717,7 +716,7 @@ function addpart(_x,_y,_dx,_dy,_type,_maxage,_col,_s)
  _p.tpe=_type
  _p.mage=_maxage
  _p.age=0
- _p.col=0
+ _p.col=_col[1]
  _p.colarr=_col
  _p.rot=0
  _p.rottimer=0
@@ -872,6 +871,7 @@ end
 -- type 2 - ball of smoke
 -- type 3 - rotating sprite
 -- type 4 - blue rotating sprite
+-- type 5 - gravity smoke
 
 -- big particle updater
 function updateparts()
@@ -900,6 +900,14 @@ function updateparts()
     _p.dy+=0.05
    end
 
+   --appy low gravity
+   if _p.tpe == 5 then
+    if abs(_p.dy)<1 then
+     _p.dy+=0.01
+    end
+   end
+
+
    --rotate
    if _p.tpe == 3 or _p.tpe == 4 then
     _p.rottimer+=1
@@ -912,7 +920,7 @@ function updateparts()
    end
 
    --shrink
-   if _p.tpe == 2 then
+   if _p.tpe == 2 or _p.tpe == 5 then
     local _ci=1-(_p.age/_p.mage)
     _p.s=_ci*_p.os
    end
@@ -937,7 +945,7 @@ function drawparts()
   -- pixel particle
   if _p.tpe == 0 or _p.tpe == 1 then
    pset(_p.x,_p.y,_p.col)
-  elseif _p.tpe == 2 then
+  elseif _p.tpe == 2 or _p.tpe == 5 then
    circfill(_p.x,_p.y,_p.s,_p.col)
   elseif _p.tpe == 3 or _p.tpe == 4 then
    local _fx,_fy
@@ -1112,6 +1120,16 @@ function update_winnerwait()
 end
 
 function update_winner()
+ local _ang = rnd()
+ local _dx = sin(_ang)*(rnd(0.5))
+ local _dy = cos(_ang)*(rnd(0.5))
+ local _mycol={12,12,5,5,0}
+ local _toprow=40
+ local _btnrow=_toprow+52
+
+ addpart(flr(rnd(128)),_toprow,_dx,_dy,5,120+rnd(15),_mycol,3+rnd(6))
+ addpart(flr(rnd(128)),_btnrow,_dx,_dy,5,120+rnd(15),_mycol,3+rnd(6))
+
  if govercountdown<0 then
   if loghs then
    if btnp(0) then
@@ -1196,7 +1214,7 @@ function update_winner()
    govercountdown= -1
    blinkspeed=8
    mode="start"
-   parts={}
+   part={}
    startparts()
    hs_x=128
    hs_dx=0
@@ -1256,6 +1274,16 @@ function update_start()
 end
 
 function update_gameover()
+ local _ang = rnd()
+ local _dx = sin(_ang)*(rnd(0.3))
+ local _dy = cos(_ang)*(rnd(0.3))
+ local _mycol={0,0,2,8}
+ local _toprow=60
+ local _btnrow=81
+
+ addpart(flr(rnd(128)),_toprow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
+ addpart(flr(rnd(128)),_btnrow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
+
  if govercountdown<0 then
   if btnp(4) then
    govercountdown=80
@@ -1276,12 +1304,13 @@ function update_gameover()
    if goverrestart then
     govercountdown= -1
     blinkspeed=8
+    part={}
     startgame()
    else
     govercountdown= -1
     blinkspeed=8
     mode="start"
-    parts={}
+    part={}
     startparts()
     hs_x=128
     hs_dx=128
@@ -1308,6 +1337,15 @@ end
 
 
 function update_levelover()
+ local _ang = rnd()
+ local _dx = sin(_ang)*(rnd(0.3))
+ local _dy = cos(_ang)*(rnd(0.3))
+ local _mycol={12,12,5,5,0}
+ local _toprow=60
+ local _btnrow=75
+ addpart(flr(rnd(128)),_toprow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
+ addpart(flr(rnd(128)),_btnrow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
+
  if govercountdown<0 then
   if btnp(4) then
    govercountdown=80
@@ -1320,6 +1358,7 @@ function update_levelover()
   if govercountdown<=0 then
    govercountdown= -1
    blinkspeed=8
+   part={}
    nextlevel()
   end
  end
@@ -1590,6 +1629,9 @@ function draw_sash()
 end
 
 function draw_winner()
+ -- draw game underneath sash
+ draw_game()
+
  if loghs then
   --won. type in name
   --for highscore list
@@ -1649,6 +1691,9 @@ function draw_start()
 end
 
 function draw_gameover()
+ -- draw particles
+ draw_game()
+
  local _c1, _c2
  rectfill(0,60,128,81,0)
  print("game over",46,62,7)
@@ -1670,9 +1715,11 @@ function draw_gameover()
 end
 
 function draw_levelover()
- rectfill(0,60,128,75,0)
- print("stage clear!",46,62,7)
- print("press ❎ to continue",27,68,blink_w)
+ draw_game()
+
+ rectfill(0,60,128,75,12)
+ print("stage clear!",46,62,1)
+ print("press ❎ to continue",27,68,blink_b)
 end
 
 function draw_game()
