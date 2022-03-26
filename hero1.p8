@@ -8,6 +8,10 @@ __lua__
    -- dev logo
 -- 2 playesting issues
    -- ball gets stuck between paddle and wall
+   -- fix ramming
+   -- add ball save
+   -- fix levels
+   -- track time
 -- 3 copy protection
 
 function _init()
@@ -78,7 +82,6 @@ function _init()
  --typing in intitals
  nitials={1,1,1}
  nit_sel=1
- nit_conf=false
  --sash
  sash_w=0
  sash_dw=0
@@ -277,7 +280,7 @@ function serveball()
  resetpills()
 
  sticky_x=0
-
+ sticky=false
  --0.50
  --1.30
 end
@@ -1156,72 +1159,45 @@ function update_winner()
   if loghs then
    if btnp(0) then
     sfx(17)
-    if nit_conf then
-     nit_conf=false
-     sfx(19)
-    end
-    nit_conf=false
     nit_sel-=1
     if nit_sel<1 then
-     nit_sel = 3
+     nit_sel = 4
     end
    end
    if btnp(1) then
     sfx(17)
-    if nit_conf then
-     nit_conf=false
-     sfx(19)
-    end
-    nit_conf=false
     nit_sel+=1
-    if nit_sel>3 then
+    if nit_sel>4 then
      nit_sel = 1
     end
    end
    if btnp(2) then
-    sfx(16)
-    if nit_conf then
-     nit_conf=false
-     sfx(19)
-    end
-    nit_conf=false
-    nitials[nit_sel]-=1
-    if nitials[nit_sel]<1 then
-     nitials[nit_sel]=#hschars
+    if nit_sel<4 then
+     sfx(16)
+     nitials[nit_sel]-=1
+     if nitials[nit_sel]<1 then
+      nitials[nit_sel]=#hschars
+     end
     end
    end
    if btnp(3) then
-    sfx(16)
-    if nit_conf then
-     nit_conf=false
-     sfx(19)
-    end
-    nitials[nit_sel]+=1
-    if nitials[nit_sel]>#hschars then
-     nitials[nit_sel]=1
+    if nit_sel<4 then
+     sfx(16)
+     nitials[nit_sel]+=1
+     if nitials[nit_sel]>#hschars then
+      nitials[nit_sel]=1
+     end
     end
    end
    if btnp(5) then
-    if nit_conf then
-     --confirm initials
-     --add a new high score
+    if nit_sel==4 then
      addhs(points,nitials[1],nitials[2],nitials[3])
      savehs()
      govercountdown=80
      blinkspeed=1
      sfx(15)
-    else
-     nit_conf=true
-     sfx(18)
     end
    end
-   if btnp(4) then
-    if nit_conf then
-     nit_conf=false
-     sfx(19)
-    end
-   end
-
   else
    if btnp(4) then
     govercountdown=80
@@ -1314,13 +1290,13 @@ function update_gameover()
  addpart(flr(rnd(128)),_btnrow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
 
  if govercountdown<0 then
-  if btnp(5) then
+  if btnp(5) or btnp(1) then
    govercountdown=80
    blinkspeed=1
    sfx(12)
    goverrestart=true
   end
-  if btnp(4) then
+  if btnp(4) or btnp(0) then
    govercountdown=80
    blinkspeed=1
    sfx(12)
@@ -1377,7 +1353,7 @@ function update_levelover()
  addpart(flr(rnd(128)),_btnrow,_dx,_dy,5,70+rnd(15),_mycol,3+rnd(6))
 
  if govercountdown<0 then
-  if btnp(4) then
+  if btnp(5) or btnp(1) then
    govercountdown=80
    blinkspeed=1
    sfx(15)
@@ -1579,21 +1555,14 @@ function draw_winner()
   print("you have beaten the game",15,_y+14,7)
   print("enter your initials",15,_y+20,7)
   print("for the high score list.",15,_y+26,7)
-  local _colors = {7,7,7}
-  if nit_conf then
-    _colors = {blink_b,blink_b,blink_b}
-  else
-   _colors[nit_sel] = blink_b
-  end
-  print(hschars[nitials[1]],59,_y+34,_colors[1])
-  print(hschars[nitials[2]],63,_y+34,_colors[2])
-  print(hschars[nitials[3]],67,_y+34,_colors[3])
+  local _colors = {7,7,7,7}
+  _colors[nit_sel] = blink_b
+  print(hschars[nitials[1]],53,_y+34,_colors[1])
+  print(hschars[nitials[2]],57,_y+34,_colors[2])
+  print(hschars[nitials[3]],61,_y+34,_colors[3])
+  print("ok",69,_y+34,_colors[4])
 
-  if nit_conf then
-   print("press ❎ to confirm",27,_y+42,blink_b)
-  else
-   print("use ⬅️➡️⬆️⬇️❎",35,_y+42,6)
-  end
+  print("use ⬅️➡️⬆️⬇️❎",35,_y+42,6)
  else
   --won but no highscore
   local _y=40
@@ -1650,8 +1619,8 @@ function draw_gameover()
    _c1=5
   end
  end
- print("press ❎ to retry level",20,68,_c1)
- print("press 🅾️ for main menu",20,74,_c2)
+ print("press ❎ or ➡️ to retry level",8,68,_c1)
+ print("press 🅾️ or ⬅️ for main menu",8,74,_c2)
 end
 
 function draw_levelover()
@@ -1659,7 +1628,7 @@ function draw_levelover()
 
  rectfill(0,60,128,75,12)
  print("stage clear!",46,62,1)
- print("press ❎ to continue",27,68,blink_b)
+ print("press ❎ or ➡️ to continue",12,68,blink_b)
 end
 
 function draw_game()
@@ -2217,7 +2186,7 @@ end
 function loadlevels()
 
 --01 simple breakout
-levels[1]="///b9bb9bbbpbbpbbpbbb9bb9b"
+levels[1]="///b"
 
 --02 stairway to heaven
 levels[2]="/b/bb/bbp/b3/b4/b4p/b6/bsb5/b7p/h9s"
@@ -2336,10 +2305,10 @@ end
 __gfx__
 00000000dd6666dddd6666dddd6666dddd6666dddd6666dddd6666dddd6666dd5aa55aa55a776666666677766667777777777777000000000000000000000000
 00000000d660066dd660066dd660066dd660066dd660066dd660066dd660066d9900990099ddddddd6ddccddddddcceeeeeeeeee000000000000000000000000
-00700700660440556606605566033055660110556600005566022055660990559009900990dddd6dddddccddccddcceeeeeeeeee000000000000000000000000
-00077000604749056067670560373b0560171c05600705056027280560979a050099009900d6ddddddd6ccddddddcceeeeeeeeee000000000000000000000000
-0007700060449905606677056033bb056011cc0560005505602288056099aa0504400440045555555555ddd5555ddddddddddddd000000000000000000000000
-007007006609905566077055660bb055660cc0556605505566088055660aa0550000000000000000000000000000000000000000000000000000000000000000
+00700700660440556606605566033055660110556600005566022055660aa0559009900990dddd6dddddccddccddcceeeeeeeeee000000000000000000000000
+00077000604744056067670560373b0560171c05600705056027280560a7aa050099009900d6ddddddd6ccddddddcceeeeeeeeee000000000000000000000000
+0007700060444905606677056033bb056011cc05600055056022880560aaaa0504400440045555555555ddd5555ddddddddddddd000000000000000000000000
+007007006604905566077055660bb055660cc0556605505566088055660aa0550000000000000000000000000000000000000000000000000000000000000000
 00000000d650055dd650055dd650055dd650055dd650055dd650055dd650055d0000000000000000000000000000000000000000000000000000000000000000
 00000000dd5555dddd5555dddd5555dddd5555dddd5555dddd5555dddd5555dd0000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
