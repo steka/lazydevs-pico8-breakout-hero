@@ -2,19 +2,23 @@ pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
 --goals
--- 10 level design
--- 11 gameplay tweaks
+-- 1 gameplay tweaks
 -------- smaller paddle??
 -------- powerup timers??
 
--- 14 infinite ball protection
--- 15 visual stuff
+-- 2 arcade game over
+-- 3 stats
+-- 3 keyboard check
+
+-- testing
+
+-- 4 visual stuff
    -- sticky aura
    -- pad speedlines
    -- ball twist
--- 15 arcade game over
--- 16 randomized sick
--- 17 stats
+   -- intro
+-- 5 copy protection
+
 
 -----------------------
 --- good to have    ---
@@ -110,6 +114,17 @@ function _init()
  parttimer=0
  partrow=0
  startparts()
+
+ -- infinite loop protection
+ infcounter=0
+
+ -- sick messages
+ sick={
+       "so sick!",
+       "yeeee boiii!",
+       "impressive!",
+       "i can't even..."
+      }
 end
 
 function startgame()
@@ -133,7 +148,7 @@ function startgame()
  buildbricks(level)
  --brick_y=20
 
- lives=0
+ lives=10
  points=0
  sticky = false
 
@@ -445,6 +460,7 @@ function hitbrick(_b,_combo)
  local fshtime=10
 
  if _b.t=="b" then
+  infcounter=0
   -- regular brick
   sfx(2+chain)
   --spawn particles
@@ -459,6 +475,7 @@ function hitbrick(_b,_combo)
   --invincible brick
   sfx(10)
  elseif _b.t=="h" then
+  infcounter=0
   -- hardened brick
   if timer_mega > 0 then
    sfx(2+chain)
@@ -480,6 +497,7 @@ function hitbrick(_b,_combo)
    end
   end
  elseif _b.t=="p" then
+  infcounter=0
   -- powerup brick
   sfx(2+chain)
   --spawn particles
@@ -492,6 +510,7 @@ function hitbrick(_b,_combo)
   end
   spawnpill(_b.x,_b.y)
  elseif _b.t=="s" then
+  infcounter=0
   -- sposion brick
   sfx(2+chain)
   shatterbrick(_b,lasthitx,lasthity)
@@ -506,7 +525,8 @@ end
 -- increase chain by one
 function boostchain()
  if chain==6 then
-  showsash("so sick!!",12,1)
+  local _si=1+flr(rnd(#sick))
+  showsash(sick[_si],12,1)
  end
  chain+=1
  chain=mid(1,chain,7)
@@ -533,7 +553,6 @@ function spawnpill(_x,_y)
  --else
  -- _t = 3
  --end
- _t=1
 
  _pill={}
  _pill.x = _x
@@ -1371,6 +1390,13 @@ function update_game()
   end
  end
 
+ --infinite loop protection
+ if timer_slow > 0 then
+  infcounter+=0.5
+ else
+  infcounter+=1
+ end
+
  if timer_expand > 0 then
   -- check if pad should grow
   pad_w = flr(pad_wo * 1.5)
@@ -1877,10 +1903,10 @@ end
 
 function updateball(bi)
  myball = ball[bi]
-
  if myball.stuck then
   myball.x=pad_x+sticky_x
   myball.y=pad_y-ball_r-1
+  infcounter=0
  else
   --regular ball physics
   if timer_slow > 0 then
@@ -2011,6 +2037,7 @@ function collide(_b,_c)
   --wall collision
   ----------------
   --puft and sound
+  checkinf(_b)
   spawnpuft(_b.x,_b.y)
   sfx(0)
  elseif _c.t=="pad" then
@@ -2018,6 +2045,7 @@ function collide(_b,_c)
   --pad collision
   ----------------
   chain=1
+  infcounter=0
   _b.rammed=false
   --change angle
   if abs(pad_dx)>2 and _c.d=="top" then
@@ -2047,12 +2075,25 @@ function collide(_b,_c)
   ----------------
   --brick collision
   ----------------
+  checkinf(_b)
   hitbrick(_c.brick,true)
   if _c.brick.t=="i" then
    spawnpuft(_b.x,_b.y)
   end
  end
 
+end
+
+function checkinf(_b)
+ if infcounter>600 then
+
+  infcounter=0
+  local _nuang
+  repeat
+   _nuang=flr(rnd(3))
+  until _nuang~=_b.ang
+  setang(_b,_nuang)
+ end
 end
 
 function coldist(_b,_col)
