@@ -4,7 +4,6 @@ __lua__
 -- breakout hero (beta)
 -- by layz devs
 
--- score overflow 32367.99
 -- sash confusing
 -- frame rate
 -- feels slow (fast mode)
@@ -22,7 +21,6 @@ function _init()
  pirate=false
  if (stat(102)!="www.lexaloffle.com" and stat(102)!=0) pirate=true
 
- initstats()
  cartdata("layzdevs_hero1")
  cls()
  screenbox={left=126,
@@ -75,13 +73,13 @@ function _init()
 
  --highscrore
  hs={}
+ hst={}
  hs1={}
  hs2={}
  hs3={}
  hsb={true,false,false,false,false}
  --reseths()
  loadhs()
- loadstats()
 
  hschars={"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}
  hs_x=128
@@ -138,7 +136,6 @@ function startgame()
 end
 
 function restartlevel()
- stimerreset()
  mode="game"
  ball_r=2
  ball_dr=0.5
@@ -157,6 +154,7 @@ function restartlevel()
  buildbricks(level)
  lives=startlives
  points=0
+ points2=0
  sticky = false
  chain=1
 
@@ -170,7 +168,6 @@ function restartlevel()
 end
 
 function nextlevel()
- stimerreset()
  mode="game"
  pad_x=52
  pad_y=120
@@ -389,14 +386,13 @@ function levelover()
 end
 
 function wingame()
- addstat2()
  music(8)
  mode="winnerwait"
  govercountdown=60
  blinkspeed=16
 
  --enough for high score?
- if points>hs[5] then
+ if points2>hst[5] or (points2==hst[5] and points>hs[5]) then
   loghs=true
   nit_sel=1
   nit_conf=false
@@ -478,7 +474,7 @@ function hitbrick(_b,_combo)
   _b.fsh=fshtime
   _b.v=false
   if _combo then
-   getpoints(10)
+   getpoints(1)
    boostchain()
   end
  elseif _b.t=="i" then
@@ -492,7 +488,7 @@ function hitbrick(_b,_combo)
    _b.fsh=fshtime
    _b.v=false
    if _combo then
-    getpoints(10)
+    getpoints(1)
     boostchain()
    end
   else
@@ -515,7 +511,7 @@ function hitbrick(_b,_combo)
   _b.fsh=fshtime
   _b.v=false
   if _combo then
-   getpoints(10)
+   getpoints(1)
    boostchain()
   end
   spawnpill(_b.x,_b.y)
@@ -526,7 +522,7 @@ function hitbrick(_b,_combo)
   shatterbrick(_b,lasthitx,lasthity)
   _b.t="zz"
   if _combo then
-   getpoints(10)
+   getpoints(1)
    boostchain()
   end
  end
@@ -551,6 +547,11 @@ function getpoints(_p)
  else
   points+=(_p*chain*pointsmult)*10
  end
+ if points>=10000 then
+  points2+=1
+  points-=10000
+ end
+
 end
 
 function spawnpill(_x,_y)
@@ -1091,7 +1092,6 @@ end
 -- update functions
 
 function _update60()
- stimertick()
  doblink()
  doshake()
  updateparts()
@@ -1219,7 +1219,7 @@ function update_winner()
    end
    if btnp(5) then
     if nit_sel==4 then
-     addhs(points,nitials[1],nitials[2],nitials[3])
+     addhs(points,points2,nitials[1],nitials[2],nitials[3])
      savehs()
      govercountdown=80
      blinkspeed=1
@@ -1275,17 +1275,11 @@ function update_start()
     if hs_dx==128 then
      hs_dx=0
      sfx(20)
-    elseif hs_dx==0 then
-     hs_dx=-128
-     sfx(20)
     end
    end
    if btnp(1) then
     if hs_dx==0 then
      hs_dx=128
-     sfx(20)
-    elseif hs_dx==-128 then
-     hs_dx=0
      sfx(20)
     end
    end
@@ -1445,9 +1439,9 @@ function update_game()
  if btnp(5) then
   releasestuck()
  end
- --if btnp(4) then
- -- nextlevel()
- --end
+ if btnp(4) then
+  nextlevel()
+ end
 
  if not(buttpress) then
   pad_dx=pad_dx/1.3
@@ -1628,7 +1622,6 @@ function draw_start()
  print("patreon.com/gruber99",25+(hs_x-128),70,2)
 
  prinths(hs_x)
- printstats(hs_x+128)
  if hs_x>=0 and not(pirate) then
   print("press ❎ to start",30,92,blink_g)
   if hs_x==128 then
@@ -1778,7 +1771,7 @@ function draw_game()
   print(debug,1,1,7)
  else
   print("lives:"..lives,1,1,7)
-  print("score:"..points,60,1,7)
+  print("score:"..pointstring(points2,points),60,1,7)
   local _ct=chain.."x"
   local _cc=7
   if timer_reduce>0 then
@@ -1791,12 +1784,36 @@ function draw_game()
 
  draw_sash()
 end
+
+function pointstring(s2,s1)
+ if (s1==0 and s2==0) return "0"
+ local ret=""
+ if s2>0 then
+  ret=ret..s2
+  if s1==0 then
+   ret=ret.."0000"
+  elseif s1<10 then
+   ret=ret.."000"..s1
+  elseif s1<100 then
+   ret=ret.."00"..s1
+  elseif s1<1000 then
+   ret=ret.."0"..s1
+  else
+   ret=ret..s1
+  end
+ else
+  ret=ret..s1
+ end
+ ret=ret.."0"
+ return ret
+end
 -->8
 --highscore tab
 
 --add a new high score
-function addhs(_score,_c1,_c2,_c3)
+function addhs(_score,_score2,_c1,_c2,_c3)
  add(hs,_score)
+ add(hst,_score2)
  add(hs1,_c1)
  add(hs2,_c2)
  add(hs3,_c3)
@@ -1817,14 +1834,15 @@ end
 --sort high score list
 function sorths()
  for i=1,#hs do
-  local j = i
-  while j > 1 and hs[j-1] < hs[j] do
+  local j=i
+  while j>1 and ((hst[j-1]==hst[j] and hs[j-1]<hs[j]) or hst[j-1]<hst[j]) do
    hs[j],hs[j-1]=hs[j-1],hs[j]
+   hst[j],hst[j-1]=hst[j-1],hst[j]
    hs1[j],hs1[j-1]=hs1[j-1],hs1[j]
    hs2[j],hs2[j-1]=hs2[j-1],hs2[j]
    hs3[j],hs3[j-1]=hs3[j-1],hs3[j]
    hsb[j],hsb[j-1]=hsb[j-1],hsb[j]
-   j = j - 1
+   j=j-1
   end
  end
 end
@@ -1832,7 +1850,8 @@ end
 --resets the high score list
 function reseths()
  --create default values
- hs={3000,2000,1000,500,250}
+ hs={300,200,100,50,25}
+ hst={0,0,0,0,0}
  hs1={11,11,11,11,11}
  hs2={18,18,18,18,18}
  hs3={19,19,19,19,19}
@@ -1851,10 +1870,11 @@ function loadhs()
   _slot+=1
   for i=1,5 do
    hs[i]=dget(_slot)
-   hs1[i]=dget(_slot+1)
-   hs2[i]=dget(_slot+2)
-   hs3[i]=dget(_slot+3)
-   _slot+=4
+   hst[i]=dget(_slot+1)
+   hs1[i]=dget(_slot+2)
+   hs2[i]=dget(_slot+3)
+   hs3[i]=dget(_slot+4)
+   _slot+=5
   end
   sorths()
  else
@@ -1871,10 +1891,11 @@ function savehs()
  _slot=1
  for i=1,5 do
   dset(_slot,hs[i])
-  dset(_slot+1,hs1[i])
-  dset(_slot+2,hs2[i])
-  dset(_slot+3,hs3[i])
-  _slot+=4
+  dset(_slot+1,hst[i])
+  dset(_slot+2,hs1[i])
+  dset(_slot+3,hs2[i])
+  dset(_slot+4,hs3[i])
+  _slot+=5
  end
 end
 
@@ -1898,7 +1919,7 @@ function prinths(_x)
   print(_name,_x+45,14+7*i,_c)
 
   -- actual score
-  local _score=" "..hs[i]
+  local _score=" "..pointstring(hst[i],hs[i])
 
   print(_score,(_x+100)-(#_score*4),14+7*i,_c)
  end
@@ -2065,7 +2086,6 @@ function updateball(bi)
    else
     shake+=0.4
     lives-=1
-    addstat1()
     if lives<0 then
      lives=0
      gameover()
@@ -2324,78 +2344,6 @@ levels[14]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxih
 --18 lazy devs
 levels[15]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
 
-end
--->8
--- playtesting tracking
-
-function initstats()
- stat1={}
- stat2={}
- sectimer=0
- secs=0
- for i=1,15 do
-  stat1[i]=0 -- number lives lost
-  stat2[i]=0 -- number of wins
- end
-end
-
-function stimertick()
- sectimer+=1
- if sectimer>60 then
-  sectimer-=60
-  secs+=1
- end
-end
-
-function stimerreset()
- sectimer=0
- secs=0
-end
-
-function addstat1()
- stat1[levelnum]+=1
- savestats()
-end
-
-function addstat2()
- stat2[levelnum]=secs
- savestats()
- stimerreset()
-end
-
-function loadstats()
- local _slot=21
-
- if dget(21)==45183 then
-  _slot+=1
-  for i=1,15 do
-   stat1[i]=dget(_slot)
-   stat2[i]=dget(_slot+1)
-   _slot+=2
-  end
- else
-  savestats()
- end
-end
-
-function savestats()
- local _slot=21
- dset(_slot,45183)
-
- _slot+=1
- for i=1,15 do
-  dset(_slot,stat1[i])
-  dset(_slot+1,stat2[i])
-  _slot+=2
- end
-end
-
-function printstats(_x)
- for i=1,15 do
-  print(i..".",5+_x,i*6,5)
-  print(""..stat1[i],43+_x,i*6,6)
-  print(""..stat2[i],83+_x,i*6,7)
- end
 end
 __gfx__
 00000000dd6666dddd6666dddd6666dddd6666dddd6666dddd6666dddd6666dd5aa55aa55a776666666677766667777777777777000000000000000000000000
