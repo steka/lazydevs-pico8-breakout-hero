@@ -6,9 +6,7 @@ __lua__
 -- 11 gameplay tweaks
 -------- smaller paddle??
 -------- powerup timers??
--------- tougher hardened blocks
 
--- 12 lost ball
 -- 14 infinite ball protection
 -- 15 visual stuff
    -- sticky aura
@@ -234,6 +232,11 @@ function addbrick(_i,_t)
  _b.oy=-(128+rnd(128))
  _b.dx=0
  _b.dy=rnd(64)
+ _b.hp=1
+ -- strength of hardened blocks
+ if _t=="h" then
+  _b.hp=2
+ end
 
  add(bricks,_b)
 end
@@ -283,6 +286,7 @@ function newball()
  b.dy = 0
  b.ang = 1
  b.stuck = false
+ b.rammed = false
  return b
 end
 
@@ -294,6 +298,7 @@ function copyball(ob)
  b.dy = ob.dy
  b.ang = ob.ang
  b.stuck = ob.stuck
+ b.rammed = ob.rammed
  return b
 end
 
@@ -465,11 +470,14 @@ function hitbrick(_b,_combo)
    end
   else
    sfx(10)
-   _b.t="b"
    _b.fsh=fshtime
    --bump the brick
    _b.dx = lasthitx*0.25
    _b.dy = lasthity*0.25
+   _b.hp-=1
+   if _b.hp<=0 then
+    _b.t="b"
+   end
   end
  elseif _b.t=="p" then
   -- powerup brick
@@ -525,7 +533,7 @@ function spawnpill(_x,_y)
  --else
  -- _t = 3
  --end
-
+ _t=1
 
  _pill={}
  _pill.x = _x
@@ -1405,6 +1413,8 @@ function update_game()
  -- big ball loop
  for bi=#ball,1,-1 do
   updateball(bi)
+  --check if paddle rammed ball
+  padramcheck(ball[bi])
  end
 
  -- move pills
@@ -1422,6 +1432,8 @@ function update_game()
    sfx(11)
   end
  end
+
+
 
  checkexplosions()
 
@@ -2006,6 +2018,7 @@ function collide(_b,_c)
   --pad collision
   ----------------
   chain=1
+  _b.rammed=false
   --change angle
   if abs(pad_dx)>2 and _c.d=="top" then
    if sign(pad_dx)==sign(_b.dx) then
@@ -2053,10 +2066,10 @@ function dist(x1,y1,x2,y2)
 end
 
 function getpadbox()
- local _l=pad_x-(pad_w/2)
- local _r=pad_x+(pad_w/2)
+ local _l=flr(pad_x-(pad_w/2))
+ local _r=_l+pad_w
  local _t=pad_y
- local _b=pad_y+pad_h
+ local _b=pad_y+pad_w
  return {left=_l,right=_r,top=_t,bottom=_b}
 end
 
@@ -2066,6 +2079,48 @@ function getbrickbox(_b)
  local _t=_b.y
  local _b=_b.y+brick_h
  return {left=_l,right=_r,top=_t,bottom=_b}
+end
+
+function padramcheck(_b)
+ if _b.stuck then
+  return
+ end
+ local _pbox = getpadbox()
+ if box_box(_pbox.left+1,
+            _pbox.top+1,
+            pad_w-2,
+            pad_w,
+            _b.x-ball_r,
+            _b.y-ball_r,
+            ball_r*2,
+            ball_r*2
+           ) then
+  --debug="rammed!"
+  if _b.dy<0 then
+   -- ball flying up.
+   -- better not touch
+   return
+  end
+  -- change speed of the ball
+  if sign(_b.dx)==sign(pad_dx) then
+   _b.dx+=(pad_dx*2)
+  else
+   _b.dx=-_b.dx
+   _b.dx+=(pad_dx*2)
+  end
+  -- reset ball postion
+  if _b.x<pad_x then
+   _b.x=_pbox.left-ball_r
+  else
+   _b.x=_pbox.right+ball_r
+  end
+  -- puft and sound
+  if _b.rammed~=true then
+   sfx(1)
+   spawnpuft(_b.x,_b.y)
+   _b.rammed=true
+  end
+ end
 end
 -->8
 --levels
