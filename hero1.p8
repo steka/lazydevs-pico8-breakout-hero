@@ -4,7 +4,6 @@ __lua__
 -- breakout hero (beta)
 -- by layz devs
 
--- megeball useless
 -- sash confusing
 
 -- ? difficult to redirect the ball
@@ -152,6 +151,8 @@ function restartlevel()
  chain=1
 
  timer_mega=0
+ timer_mega_w=0
+
  timer_slow=0
  timer_expand=0
  timer_reduce=0
@@ -177,6 +178,7 @@ function nextlevel()
  chain=1
  sticky = false
  timer_mega=0
+ timer_mega_w=0
  timer_slow=0
  timer_expand=0
  timer_reduce=0
@@ -442,7 +444,8 @@ function powerupget(_p)
   showsash("reduce!",0,8)
  elseif _p == 6 then
   -- megaball
-  timer_mega = 120
+  timer_mega_w=600
+  timer_mega=0
   showsash("megaball!",8,2)
  elseif _p == 7 then
   -- multiball
@@ -455,6 +458,7 @@ function hitbrick(_b,_combo)
  local fshtime=10
 
  if _b.t=="s" or _b==sd_brick then
+  megaballsmash()
   infcounter=0
   -- sposion brick
   sfx(2+chain)
@@ -468,6 +472,7 @@ function hitbrick(_b,_combo)
   end
   if (_combo) boostchain()
  elseif _b.t=="b" then
+  megaballsmash()
   infcounter=0
   -- regular brick
   sfx(2+chain)
@@ -483,10 +488,12 @@ function hitbrick(_b,_combo)
   --invincible brick
   sfx(10)
  elseif _b.t=="h" then
+  megaballsmash()
   infcounter=0
   -- hardened brick
-  if timer_mega > 0 then
+  if timer_mega>0 then
    sfx(2+chain)
+   shatterbrick(_b,lasthitx,lasthity)
    _b.fsh=fshtime
    _b.v=false
    if _combo then
@@ -505,6 +512,7 @@ function hitbrick(_b,_combo)
    end
   end
  elseif _b.t=="p" then
+  megaballsmash()
   infcounter=0
   -- powerup brick
   sfx(2+chain)
@@ -545,6 +553,13 @@ function getpoints(_p)
   points-=10000
  end
 
+end
+
+function megaballsmash()
+ if timer_mega_w>0 then
+  timer_mega_w=0
+  timer_mega=120
+ end
 end
 
 function spawnpill(_x,_y)
@@ -1536,6 +1551,9 @@ function update_game()
  if timer_mega > 0 then
   timer_mega-=1
  end
+ if timer_mega_w > 0 then
+  timer_mega_w-=1
+ end
  if timer_slow > 0 then
   timer_slow-=1
  end
@@ -1762,7 +1780,7 @@ function draw_game()
  -- balls
  for i=1,#ball do
   local _ballspr=34
-  if timer_mega > 0 then
+  if timer_mega_w>0 or timer_mega>0 then
    _ballspr=35
   end
   palt(1,true)
@@ -2056,9 +2074,8 @@ function updateball(bi)
     if _tmpcol~=nil then
      _tmpcol.t="brick"
      _tmpcol.brick=bricks[i]
-     if (timer_mega > 0 and bricks[i].t=="i")
-     or timer_mega <= 0 then
-      --megaball????
+     if ((timer_mega > 0 or timer_mega_w>0) and bricks[i].t=="i")
+     or (timer_mega<=0 and timer_mega_w<=0) then
       add(_cols,_tmpcol)
      else
       add(_mcols,_tmpcol)
@@ -2103,7 +2120,7 @@ function updateball(bi)
   end
 
   --trail particles
-  if timer_mega > 0 then
+  if timer_mega > 0 or timer_mega_w > 0 then
    spawnmtrail(myball.x,myball.y)
   else
    spawntrail(myball.x,myball.y)
