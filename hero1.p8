@@ -5,14 +5,13 @@ __lua__
 -- by layz devs
 
 -- sash confusing
-
 -- ? difficult to redirect the ball
 
 function _init()
  pirate=false
  if (stat(102)!="www.lexaloffle.com" and stat(102)!=0) pirate=true
 
- cartdata("layzdevs_hero1")
+ cartdata("layzdevs_hero1_v2")
  cls()
  screenbox={left=126,
             right=1,
@@ -132,23 +131,13 @@ function restartlevel()
  ball_spd=1
  if (fastmode) ball_spd=1.5
 
- pad_x=64
- pad_y=120
- pad_dx=0
- pad_wo=24
- pad_w=24
- pad_h=6
- pad_c=7
+ pad_x,pad_y,pad_dx,pad_wo,pad_w,pad_h,pad_c=64,120,0,24,24,6,7
 
- brick_w=9
- brick_h=4
+ brick_w,brick_h=9,4
 
  buildbricks(level)
- lives=startlives
- points=0
- points2=0
- sticky = false
- chain=1
+
+ lives,points,points2,sticky,chain=startlives,0,0,false,1
 
  timer_mega=0
  timer_mega_w=0
@@ -192,12 +181,12 @@ function buildbricks(lvl)
  bricks={}
 
  j=0
- -- b = normal brick
- -- x = empty space
- -- i = indestructable brick
- -- h = hardened brick
- -- s = sploding brick
- -- p = powerup brick
+ -- b=normal brick
+ -- x=empty space
+ -- i=indestructable brick
+ -- h=hardened brick
+ -- s=sploding brick
+ -- p=powerup brick
 
  for i=1,#lvl do
   j+=1
@@ -252,7 +241,6 @@ function addbrick(_i,_t)
  if _t=="h" then
   _b.hp=2
  end
-
  add(bricks,_b)
 end
 
@@ -279,6 +267,7 @@ function serveball()
  pointsmult=1
  chain=1
  timer_mega=0
+ timer_mega_w=0
  timer_slow=0
  timer_expand=0
  timer_reduce=0
@@ -541,7 +530,6 @@ end
 
 -- get points
 function getpoints(_p)
- --timer_reduce
  if (fastmode) _p=_p*2
  if timer_reduce<=0 then
   points+=_p*chain*pointsmult
@@ -609,7 +597,6 @@ function explodebrick(_i)
 end
 
 function box_box(box1_x,box1_y,box1_w,box1_h,box2_x,box2_y,box2_w,box2_h)
- -- checks for a collion of the two boxes
  if box1_y > box2_y+box2_h then return false end
  if box1_y+box1_h < box2_y then return false end
  if box1_x > box2_x+box2_w then return false end
@@ -677,7 +664,6 @@ function showsash(_t,_c,_tc)
 end
 
 function doshake()
- -- -16 +16
  local shakex,shakey=16-rnd(32),16-rnd(32)
 
  camera(shakex*shake,shakey*shake)
@@ -688,13 +674,11 @@ function doshake()
  end
 end
 
--- do the blinking
 function doblink()
  local g_seq = {3,11,7,11}
  local w_seq = {5,6,7,6}
  local b_seq = {9,10,7,10,9}
  local r_seq = {8,9,10,11,12}
- -- text blinking
  blinkframe+=1
  if blinkframe>blinkspeed then
   blinkframe=0
@@ -743,33 +727,21 @@ function fadepal(_perc)
 
  local p=flr(mid(0,_perc,1)*100)
 
- -- these are helper variables
  local kmax,col,dpal,j,k
  dpal={0,1,1, 2,1,13,6,
           4,4,9,3, 13,1,13,14}
 
- -- now we go trough all colors
  for j=1,15 do
-  --grab the current color
   col = j
-
-  --now calculate how many
-  --times we want to fade the
-  --color.
   kmax=(p+(j*1.46))/22
   for k=1,kmax do
    col=dpal[col]
   end
-
-  --finally, we change the
-  --palette
   pal(j,col,1)
  end
 end
 
 -- particle stuff
-
--- add a particle
 function addpart(_x,_y,_dx,_dy,_type,_maxage,_col,_s)
  add(part,{
    x=_x,
@@ -788,7 +760,6 @@ function addpart(_x,_y,_dx,_dy,_type,_maxage,_col,_s)
  })
 end
 
--- spawn a small puft
 function spawnpuft(_x,_y)
  for i= 0,5 do
   local _ang = rnd()
@@ -798,7 +769,6 @@ function spawnpuft(_x,_y)
  end
 end
 
--- spawn a puft in the color of a pill
 function spawnpillpuft(_x,_y,_p)
  for i= 0,20 do
   local _ang = rnd()
@@ -832,7 +802,6 @@ function spawnpillpuft(_x,_y,_p)
  end
 end
 
--- spawn death particles
 function spawndeath(_x,_y)
  for i= 0,30 do
   local _ang = rnd()
@@ -845,9 +814,7 @@ function spawndeath(_x,_y)
  end
 end
 
--- spawn death particles
 function spawnexplosion(_x,_y)
- --first smoke
  sfx(14)
  for i= 0,20 do
   local _ang = rnd()
@@ -857,7 +824,6 @@ function spawnexplosion(_x,_y)
   _mycol={0,0,5,5,6}
   addpart(_x,_y,_dx,_dy,2,80+rnd(15),_mycol,3+rnd(6))
  end
- --fireball
  for i= 0,30 do
   local _ang = rnd()
   local _dx = sin(_ang)*(1+rnd(4))
@@ -869,7 +835,6 @@ function spawnexplosion(_x,_y)
 
 end
 
--- spawn a trail particle
 function spawntrail(_x,_y)
  if rnd()<0.5 then
   local _ang = rnd()
@@ -880,7 +845,6 @@ function spawntrail(_x,_y)
  end
 end
 
--- spawn a speedline particle
 function spawnspeedline(_x,_y)
  if rnd()<0.2 then
   local _ox = rnd() * 2.5
@@ -890,7 +854,6 @@ function spawnspeedline(_x,_y)
  end
 end
 
--- spawn a megatrail particle
 function spawnmtrail(_x,_y)
  if rnd() then
   local _ang = rnd()
@@ -901,15 +864,12 @@ function spawnmtrail(_x,_y)
  end
 end
 
--- shatter brick
 function shatterbrick(_b,_vx,_vy)
- --screenshake and sound
  if shake<0.5 then
   shake+=0.07
  end
  sfx(13)
 
- --bump the brick
  _b.dx = _vx*1
  _b.dy = _vy*1
  for _x= 0,brick_w do
@@ -946,7 +906,6 @@ end
 -- type 5 - gravity smoke
 -- type 6 - speedline
 
--- big particle updater
 function updateparts()
  local _p
  for i=#part,1,-1 do
@@ -1051,23 +1010,17 @@ function drawparts()
  end
 end
 
---rebound bumped bricks
 function animatebricks()
  for i=1,#bricks do
   local _b=bricks[i]
   if _b.v or _b.fsh>0 then
-   -- see if brick is moving
    if _b.dx~=0 or _b.dy~=0 or _b.ox~=0 or _b.oy~=0 then
-    --apply the speed
     _b.ox+=_b.dx
     _b.oy+=_b.dy
 
-    --change the speed
-    --brick wants to go to zero
     _b.dx-=_b.ox/10
     _b.dy-=_b.oy/10
 
-    -- dampening
     if abs(_b.dx)>(_b.ox) then
      _b.dx=_b.dx/1.3
     end
@@ -1075,7 +1028,6 @@ function animatebricks()
      _b.dy=_b.dy/1.3
     end
 
-    -- snap to zero if close
     if abs(_b.ox)<0.2 and abs(_b.dx)<0.25 then
      _b.ox=0
      _b.dx=0
@@ -1160,7 +1112,6 @@ end
 function update_sash()
  if sash_v then
   sash_frames+=1
-  --animate width
   if sash_delay_w>0 then
    sash_delay_w-=1
   else
@@ -1484,7 +1435,7 @@ function update_game()
   releasestuck()
  end
  if btnp(4) then
-  nextlevel()
+  --nextlevel()
  end
 
  if not(buttpress) then
@@ -1605,7 +1556,7 @@ function draw_logo()
 end
 
 function draw_sash()
- local _c
+ local _c,i
  if sash_v then
   if sash_c==-1 then
    _c = blink_r
@@ -1614,6 +1565,11 @@ function draw_sash()
   end
   rectfill(0,64-sash_w,128,64+sash_w,_c)
   print(sash_text,sash_tx,62,sash_tc)
+  clip(0,64-sash_w,128,sash_w*2+1)
+  for i=1,#ball do
+   circfill(ball[i].x,ball[i].y,2,sash_tc)
+  end
+  clip()
  end
 end
 
