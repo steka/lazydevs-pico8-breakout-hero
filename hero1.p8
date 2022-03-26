@@ -4,13 +4,19 @@ __lua__
 --goals
 -- 10 level design
 -- 11 gameplay tweaks
--------- smaller paddle
--------- powerup timers
--------- reduce gives points
+-------- smaller paddle??
+-------- powerup timers??
+-------- tougher hardened blocks
+
 -- 12 lost ball
--- 13 sticky aura
 -- 14 infinite ball protection
--- 15 randomized sick
+-- 15 visual stuff
+   -- sticky aura
+   -- pad speedlines
+   -- ball twist
+-- 15 arcade game over
+-- 16 randomized sick
+-- 17 stats
 
 -----------------------
 --- good to have    ---
@@ -34,6 +40,7 @@ function _init()
  debug=""
  levelnum = 1
  levels={}
+ loadlevels()
  --levels[1] = "x5b"
  --levels[1] = "b9b/p9p/sbsbsbsbsb"
  --levels[1] = "hxixsxpxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxbxb"
@@ -440,7 +447,7 @@ function hitbrick(_b,_combo)
   _b.fsh=fshtime
   _b.v=false
   if _combo then
-   points+=10*chain*pointsmult
+   getpoints(10)
    boostchain()
   end
  elseif _b.t=="i" then
@@ -453,7 +460,7 @@ function hitbrick(_b,_combo)
    _b.fsh=fshtime
    _b.v=false
    if _combo then
-    points+=10*chain*pointsmult
+    getpoints(10)
     boostchain()
    end
   else
@@ -472,7 +479,7 @@ function hitbrick(_b,_combo)
   _b.fsh=fshtime
   _b.v=false
   if _combo then
-   points+=10*chain*pointsmult
+   getpoints(10)
    boostchain()
   end
   spawnpill(_b.x,_b.y)
@@ -482,7 +489,7 @@ function hitbrick(_b,_combo)
   shatterbrick(_b,lasthitx,lasthity)
   _b.t="zz"
   if _combo then
-   points+=10*chain*pointsmult
+   getpoints(10)
    boostchain()
   end
  end
@@ -495,6 +502,16 @@ function boostchain()
  end
  chain+=1
  chain=mid(1,chain,7)
+end
+
+-- get points
+function getpoints(_p)
+ --timer_reduce
+ if timer_reduce<=0 then
+  points+=_p*chain*pointsmult
+ else
+  points+=(_p*chain*pointsmult)*10
+ end
 end
 
 function spawnpill(_x,_y)
@@ -1375,6 +1392,9 @@ function update_game()
  if btnp(4) then
   releasestuck()
  end
+ if btnp(5) then
+  nextlevel()
+ end
 
  if not(buttpress) then
   pad_dx=pad_dx/1.3
@@ -1664,7 +1684,14 @@ function draw_game()
  else
   print("lives:"..lives,1,1,7)
   print("score:"..points,60,1,7)
-  print(chain.."x",120,1,7)
+  local _ct=chain.."x"
+  local _cc=7
+  if timer_reduce>0 then
+   _ct=(chain*10).."x"
+   _cc=8
+  end
+  print(_ct,126-(#_ct*4),1,_cc)
+
  end
 
  draw_sash()
@@ -2039,6 +2066,72 @@ function getbrickbox(_b)
  local _t=_b.y
  local _b=_b.y+brick_h
  return {left=_l,right=_r,top=_t,bottom=_b}
+end
+-->8
+--levels
+
+function loadlevels()
+
+--01 simple breakout
+levels[1]="///b9bb9bbbpbbpbbpbbb9bb9b"
+
+--02 stairway to heaven
+levels[2]="/b/bb/bbp/b3/b4/b4p/b6/bsb5/b7p/h9s"
+
+--03 invader
+levels[16]="xxsxxxxxs/xxsxxxxxs/xxxsxxxs/xxxbbbbbxxxxxbbbbbbbxxxbbbbbbbbbxxbbpbbbpbbxxbbbbbbbbbxxbbbbbbbbbxxbxbxxxbxbxxbxbxxxbxbxxxxxbxb/"
+
+--04 twin towers
+levels[3]="//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbx"
+
+--05 get inside
+levels[4]="pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
+
+--11 three burgers
+levels[5]="///b9bpbbpbbbpbbp/bbhxhbhxhbbbbhxhbhxhbbbbhxhbhxhbb/pbbpbbbpbbpb9b"
+
+--07 arrow
+levels[6]="/xxxxxh/xxxbbxbb/xbbxxhxxbbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbpxxhxxpbxbxxbpxpbxxbxbbxxhxxbbxbxxbbxbbxxbxbbxxxxxbbxbxxxxxxxxxb"
+
+--08 cups high
+levels[7]="/xixixxxixixxibixxxibixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
+
+--09 maze
+levels[8]="i9ix3ix4ixipxixxxxxixixxixxixxixixxipxixxixixpixxixxixixxixxixxixixxixpixxixipxxxxixxixixxxxxixsixi9"
+
+--10 mellow center
+levels[9]="/ph8phx8hhxhhhphhhxhhxhxxxxxhxhhxhxhhhxhxhhxpxhshxpxhhxhxhhhxhxhhxhxxxxxhxhhxh6xhpx8ph9h"
+
+--06 oreo
+levels[10]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
+
+--12 border wall
+levels[11]="/bbbsbbbsbbbpxxxxxxxxxpb9b/hiiiiiiiiihpxxxxpxxxxphiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
+
+--13 lungs
+levels[12]="///bbbpixipbbbiibiixiiibibbbpixipbbbbbbbixibbbbihiiixiiihibbbpixipbbbbbbbixibbbb"
+
+--14 clogged lanes
+levels[13]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
+
+--15 diagonal
+levels[14]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxihibbbpxxxxxxxhibbxxxxxxxxxhi"
+
+--16 enegry core
+levels[15]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibbbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
+
+--17 shelves
+levels[16]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
+
+--18 lazy devs
+levels[17]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
+
+--19 cells
+levels[18]="/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii/isixisixisiipixipixipiiiixiiixiii"
+
+--20 hedgehog
+levels[19]="/xiixixixiixxixxxxxxxixxxxixxxi/xxxxxp/ixixihixixixxxxxb/xixixbxixixxxxxxb/xiixihixiixxixxxpxxxixxxxixxxi/xxixixixi"
+
 end
 __gfx__
 00000000dd6666dddd6666dddd6666dddd6666dddd6666dddd6666dddd6666dd5aa55aa55a776666666677766667777777777777000000000000000000000000
