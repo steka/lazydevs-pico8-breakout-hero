@@ -5,15 +5,9 @@ __lua__
 -- by layz devs
 
 -- sash confusing
--- feels slow (fast mode)
 -- sudden death
 
 -- ? megeball useless
--- ? level ballancing
--- ? level feedback
-     -- ball bouncing forever
-     -- difficult to reach bricks
-     -- unfair bricks close to pad
 -- ? difficult to redirect the ball
 
 function _init()
@@ -36,7 +30,9 @@ function _init()
  loadlevels()
  startlives=4
  fastmode=false
-
+ sd_brick=nil
+ sd_timer=0
+ sd_thresh=1
  shake=0
 
  blink_g=7
@@ -265,11 +261,8 @@ end
 
 function levelfinished()
  if #bricks == 0 then return true end
-
  for i=1,#bricks do
-  if bricks[i].v == true and bricks[i].t != "i" then
-   return false
-  end
+  if (bricks[i].v == true and bricks[i].t != "i") return false
  end
  return true
 end
@@ -466,7 +459,20 @@ end
 function hitbrick(_b,_combo)
  local fshtime=10
 
- if _b.t=="b" then
+ if _b.t=="s" or _b==sd_brick then
+  infcounter=0
+  -- sposion brick
+  sfx(2+chain)
+  shatterbrick(_b,lasthitx,lasthity)
+  _b.t="zz"
+
+  if _b==sd_sd_brick then
+   getpoints(10)
+  else
+   getpoints(1)
+  end
+  if (_combo) boostchain()
+ elseif _b.t=="b" then
   infcounter=0
   -- regular brick
   sfx(2+chain)
@@ -516,16 +522,6 @@ function hitbrick(_b,_combo)
    boostchain()
   end
   spawnpill(_b.x,_b.y)
- elseif _b.t=="s" then
-  infcounter=0
-  -- sposion brick
-  sfx(2+chain)
-  shatterbrick(_b,lasthitx,lasthity)
-  _b.t="zz"
-  if _combo then
-   getpoints(1)
-   boostchain()
-  end
  end
 end
 
@@ -615,6 +611,35 @@ function box_box(box1_x,box1_y,box1_w,box1_h,box2_x,box2_y,box2_w,box2_h)
  return true
 end
 
+function check_sd()
+ local c=0
+ if (sd_brick!=nil) return
+ for i=1,#bricks do
+  if (bricks[i].v == true and bricks[i].t != "i") c+=1
+  if (c>sd_thresh) return
+ end
+ if (c<=sd_thresh) trigger_sd()
+end
+
+function trigger_sd()
+ for i=1,#bricks do
+  if bricks[i].v == true and bricks[i].t != "i" then
+   sd_brick=bricks[i]
+   showsash("sudden death!",5,9)
+   sd_timer=900
+  end
+ end
+end
+
+function update_sd()
+ if sd_brick!=nil then
+  sd_timer-=1
+  if sd_timer<1 then
+   sd_brick.t="zz"
+   sd_brick=nil
+  end
+ end
+end
 -->8
 -- juicy stuff --
 
@@ -1496,7 +1521,7 @@ function update_game()
   end
  end
 
-
+ update_sd()
 
  checkexplosions()
 
@@ -2138,6 +2163,7 @@ function collide(_b,_c)
   local bend,angf=false,false
   chain=1
   infcounter=0
+  check_sd()
   --hit side. save?
   if _c.d=="left" or _c.d=="right" then
    if _b.y+ball_r>pad_y+3 then
@@ -2325,13 +2351,13 @@ levels[4]="//xbbbhxbbbhxxbphbxbphbxxbhpbxbhpbxxhbbbxhbbbxxbbbbxbbbbxxbbbhxbbbhxx
 levels[5]="pi//xi/xixxxhh/xixxhbbh/xixhpbbph/xixhbssbh/xixxhbbh/xixxxhh/xi/xi/xi/si9"
 
 --08 cups high
-levels[6]="/xixixxxixixxibixxxibixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
+levels[6]="/xixixxxixixxixixxxixixxisixxxisixxiiixxxiiix/xxxbbpbb/xxxbbbbb/xxxpbpbp/xxxbbbbb/xxxbbpbb/"
 
 --14 clogged lanes
 levels[7]="//pxpxpxpxpxpbxbxbxbxbxbbxbxbxbxbxbbxbxbxbxbxbbxisisisixbbxbxbxbxbxbbxbxbxbxbxbsxixsxsxixsbxbxbxbxbxb"
 
 --16 enegry core
-levels[8]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibbbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
+levels[8]="//xibpbpbpbixxixxxxxxxixxixxxxxxxixxixiiiiixixxixibsbixixxixibsbixixxixibpbixixxixxxxxxxixxixxxxxxxixxiiiiiiiiix"
 
 --11 oreo
 levels[9]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
@@ -2340,16 +2366,16 @@ levels[9]="///xi8xxbbpbbbpbbxxbbbbbbbbbxxpbbbpbbbpxxbbbbbbbbbxxbbpbbbpbbxxi8x"
 levels[10]="//xbxbxpxbxbxxixixixixixpxbxbxbxbxpixixixixixixbxpxsxpxbxxixixixixixbxbxbxbxbxbixixixixixixpxbxpxbxpxxixixixixix"
 
 --12 border wall
-levels[11]="/bbbsbbbsbbbpxxxxxxxxxpb9b/biiiiiiiiibxpxxxpxxxpxhiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
+levels[11]="/bbbsbbbsbbbpxxxxxxxxxpb9b/biiiixiiiibxpxxxpxxxpxhiiiiiiiiih/bbpbbbbbpbbpxxxxxxxxxpb9b"
 
 --10 mellow center
-levels[12]="/ph8phx8hhxhhhphhhxhhxhxxxxxhxhhxhxhhhxhxhhxpxhshxpxhhxhxhhhxhxhhxhxxxxxhxhhxh6xhpx8ph9h"
+levels[12]="/ph8pbxxxxxxxxxbbxhhhphhhxbbxhxxxxxhxbbxhxhhhxhxbbxpxhshxpxbbxhxhhhxhxbbxhxxxxxhxbbxhhhhhhhxbpxxxxxxxxxph9h"
 
 --13 lungs
-levels[13]="///bbbpixipbbbibbiixiibbibbbbixibbbbbpbbixibbpbihiiixiiihibbbpixipbbbbbbbixibbbb"
+levels[13]="///bbbpixipbbbhbbiixiibbhbbbsixisbbbbpbsixisbpbihiiixiiihibbbpixipbbbbbbbixibbbb"
 
 --15 diagonal
-levels[14]="///sb/bbbb/bbbbbbb/pbbbbbbbb/bbpbbbbbbbsihbbpbpbbbbxxihbbbbpbbxxxxihibbbpxxxxxxxhibbxxxxxxxxxhi"
+levels[14]="///bb/bbbb/bbbbbbb/bsbbbbbbb/pbpbbbbbbbbihbbpbpbbbbxxihbbbbpbbxxxxihibbsbxxxxxxxhibpxxxxxxxxxhi"
 
 --18 lazy devs
 levels[15]="//xxxxbpb/xbpbihibpbxbihixxxihibbixxxxxxxibpibxxsxxbipbibxxxxxbibxbibxxxbibxxbibbbbbibxxxbibbbib/xxxbihib/"
